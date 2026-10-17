@@ -6,6 +6,7 @@ import from .state {
     DEMO_TODAY_EXPENSE_ID,
     DEMO_WEEKLY_BUDGET,
     HasBudget,
+    HasReversal,
     Student,
     find_student,
     initialize_budget,
@@ -26,6 +27,9 @@ def remove_finance_test_student(student_id: str) {
             }
             for income in [budget->:HasIncome:->] {
                 del income;
+            }
+            for reversal in [budget->:HasReversal:->] {
+                del reversal;
             }
             del budget;
         }
@@ -220,5 +224,74 @@ test "transaction history combines income and expenses newest first" {
     assert history[0].kind == "INCOME";
     assert history[1].id == "older-expense";
     assert history[1].kind == "EXPENSE";
+    remove_finance_test_student(student_id);
+}
+
+
+test "reversing an expense restores funds and preserves an audit entry" {
+    student_id = "phase-reverse-expense-fixture";
+    student = create_finance_test_student(student_id);
+    _ = initialize_budget(student, 7000.0, 7000.0, 4);
+    _ = record_student_expense(
+        student_id, "wrong-expense", 500.0, "Entered by mistake", date.today().isoformat()
+    );
+
+    result = reverse_student_transaction(student_id, "wrong-expense", "EXPENSE");
+    assert result.finance.remaining_budget == 7000.0;
+    assert result.finance.spent_today == 0.0;
+    assert result.transaction.reversed;
+    assert result.transaction.reversed_on == date.today().isoformat();
+
+    history = get_student_transactions(student_id);
+    assert len(history) == 1;
+    assert history[0].id == "wrong-expense";
+    assert history[0].reversed;
+    assert_value_error(
+        lambda { reverse_student_transaction(student_id, "wrong-expense", "EXPENSE"); },
+        "already reversed"
+    );
+    assert get_student_finance(student_id).remaining_budget == 7000.0;
+    remove_finance_test_student(student_id);
+}
+
+
+test "income reversal removes only unspent funds" {
+    student_id = "phase-reverse-income-fixture";
+    student = create_finance_test_student(student_id);
+    _ = initialize_budget(student, 7000.0, 3500.0, 4);
+    _ = record_student_income(student_id, "wrong-income", 1000.0, "Wrong amount");
+
+    result = reverse_student_transaction(student_id, "wrong-income", "income");
+    assert result.finance.weekly_budget == 7000.0;
+    assert result.finance.remaining_budget == 3500.0;
+    assert result.transaction.reversed;
+
+    _ = record_student_income(student_id, "spent-income", 2000.0, "Already used");
+    _ = record_student_expense(student_id, "large-expense", 4000.0, "Rent");
+    assert_value_error(
+        lambda { reverse_student_transaction(student_id, "spent-income", "INCOME"); },
+        "already been spent"
+    );
+    assert get_student_finance(student_id).remaining_budget == 1500.0;
+    remove_finance_test_student(student_id);
+}
+
+
+test "transaction reversal validates identifiers and kind" {
+    student_id = "phase-reverse-validation-fixture";
+    student = create_finance_test_student(student_id);
+    _ = initialize_budget(student, 7000.0, 3500.0, 4);
+    assert_value_error(
+        lambda { reverse_student_transaction(student_id, "", "EXPENSE"); },
+        "ID is required"
+    );
+    assert_value_error(
+        lambda { reverse_student_transaction(student_id, "missing", "TRANSFER"); },
+        "EXPENSE or INCOME"
+    );
+    assert_value_error(
+        lambda { reverse_student_transaction(student_id, "missing", "EXPENSE"); },
+        "was not found"
+    );
     remove_finance_test_student(student_id);
 }

@@ -9,7 +9,7 @@ import from "sonner" { toast }
 import from .display { PlanStep, parse_plan, level_of, fmt_clock, next_quarter_minutes }
 sv import from ..services.state { initialize_demo_state, update_available_time }
 sv import from ..services.tasks { add_academic_task, complete_academic_task, update_academic_task, update_task_progress }
-sv import from ..services.finance { add_expense, add_income, get_transactions }
+sv import from ..services.finance { add_expense, add_income, get_transactions, reverse_transaction }
 sv import from ..services.state { TransactionView }
 sv import from ..services.state { GoalView }
 sv import from ..services.student_management { add_goal, get_goals, remove_goal, update_profile }
@@ -258,6 +258,20 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         }
     }
 
+    async def reverse_financial_transaction(transaction_id: str, kind: str) -> None {
+        saving = True;
+        before = snapshot.finance.remaining_budget if snapshot else -1.0;
+        try {
+            await reverse_transaction(transaction_id, kind);
+            previousRemaining = before;
+            saving = False;
+            await after_change("Transaction reversed");
+        } except Exception as err {
+            saving = False;
+            toast.error("Couldn't reverse the transaction", {"description": error_text(err)});
+        }
+    }
+
     async def save_time(available_hours_today: float) -> None {
         saving = True;
         before = snapshot.available_time.available_hours_today if snapshot else -1.0;
@@ -381,6 +395,7 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         "completeTask": complete_task,
         "saveExpense": save_expense,
         "saveIncome": save_income,
+        "reverseTransaction": reverse_financial_transaction,
         "saveTime": save_time,
         "saveProfile": save_profile,
         "saveGoal": save_goal,

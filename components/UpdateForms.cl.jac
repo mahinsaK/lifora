@@ -551,9 +551,13 @@ def:pub IncomeForm(
 
 def:pub TransactionHistory(
     transactions: list[TransactionView],
+    saving: bool,
     onAddIncome: Callable[[], None],
-    onAddExpense: Callable[[], None]
+    onAddExpense: Callable[[], None],
+    onReverse: Callable[[str, str], None]
 ) -> JsxElement {
+    has confirmingKey: str = "";
+
     return <section className="flex flex-col gap-4 rounded-xl border bg-card p-5 shadow-sm lg:col-span-2">
         <FormHeading icon={Wallet01Icon} title="Transaction history" description="Income and expenses recorded in your graph." />
         {if len(transactions) == 0 {
@@ -562,16 +566,25 @@ def:pub TransactionHistory(
                 <div className="flex flex-wrap justify-center gap-2"><Button size="sm" onClick={lambda (e: MouseEvent) { onAddIncome(); }}>Add income</Button><Button size="sm" variant="outline" onClick={lambda (e: MouseEvent) { onAddExpense(); }}>Add expense</Button></div>
             </div>
         } else {
+            <p className="rounded-lg border border-primary/15 bg-primary/[0.04] px-3 py-2 text-xs text-muted-foreground"><span className="font-semibold text-foreground">Need to correct an entry?</span>{" Reverse it to preserve the audit trail, then add the corrected transaction."}</p>
             <ul className="divide-y rounded-lg border">
                 {for transaction in transactions {
-                    <li key={transaction.kind + transaction.id} className="flex items-center justify-between gap-4 px-4 py-3">
-                        <div className="min-w-0">
-                            <p className="truncate text-sm font-medium">{transaction.description}</p>
-                            <p className="text-xs text-muted-foreground">{transaction.occurred_on + " · " + transaction.kind.lower()}</p>
+                    transactionKey = transaction.kind + ":" + transaction.id;
+                    <li key={transactionKey} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className={"min-w-0 " + ("opacity-60" if transaction.reversed else "")}>
+                            <p className={"truncate text-sm font-medium " + ("line-through" if transaction.reversed else "")}>{transaction.description}</p>
+                            <p className="text-xs text-muted-foreground">{transaction.occurred_on + " · " + transaction.kind.lower() + ((" · reversed " + transaction.reversed_on) if transaction.reversed else "")}</p>
                         </div>
-                        <span className={"shrink-0 font-semibold tabular-nums " + ("text-primary" if transaction.kind == "INCOME" else "text-risk-high")}>
-                            {("+" if transaction.kind == "INCOME" else "−") + fmt_money(transaction.amount)}
-                        </span>
+                        <div className="flex shrink-0 items-center justify-between gap-2 sm:justify-end">
+                            <span className={"font-semibold tabular-nums " + ("text-muted-foreground line-through" if transaction.reversed else ("text-primary" if transaction.kind == "INCOME" else "text-risk-high"))}>{("+" if transaction.kind == "INCOME" else "−") + fmt_money(transaction.amount)}</span>
+                            {if transaction.reversed {
+                                <span className="rounded-full bg-muted px-2 py-1 text-[11px] font-semibold text-muted-foreground">Reversed</span>
+                            } elif confirmingKey == transactionKey {
+                                <span className="flex items-center gap-1"><Button size="sm" variant="ghost" disabled={saving} onClick={lambda (e: MouseEvent) { confirmingKey = ""; }}>Cancel</Button><Button size="sm" variant="destructive" disabled={saving} onClick={lambda (e: MouseEvent) { onReverse(transaction.id, transaction.kind); confirmingKey = ""; }}>Confirm</Button></span>
+                            } else {
+                                <Button size="sm" variant="ghost" disabled={saving} onClick={lambda (e: MouseEvent) { confirmingKey = transactionKey; }}>Reverse</Button>
+                            }}
+                        </div>
                     </li>
                 }}
             </ul>

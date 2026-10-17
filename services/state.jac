@@ -98,6 +98,14 @@ obj TransactionView {
     has amount: float;
     has description: str;
     has occurred_on: str;
+    has reversed: bool = False;
+    has reversed_on: str = "";
+}
+
+
+obj TransactionReversalResult {
+    has transaction: TransactionView;
+    has finance: FinanceView;
 }
 
 
@@ -201,6 +209,13 @@ node Income {
 }
 
 
+node TransactionReversal {
+    has transaction_id: str;
+    has kind: str;
+    has reversed_on: str;
+}
+
+
 node Goal {
     has goal_id: str;
     has title: str;
@@ -215,6 +230,7 @@ edge HasAcademicTask: Student --> AcademicTask {}
 edge HasBudget: Student --> Budget {}
 edge HasExpense: Budget --> Expense {}
 edge HasIncome: Budget --> Income {}
+edge HasReversal: Budget --> TransactionReversal {}
 edge HasGoal: Student --> Goal {}
 
 
@@ -372,6 +388,20 @@ def find_income(budget: Budget, income_id: str) -> Income | None {
     for income in [budget ->:HasIncome:->] {
         if income.income_id == income_id {
             return income;
+        }
+    }
+    return None;
+}
+
+
+def find_reversal(
+    budget: Budget,
+    transaction_id: str,
+    kind: str
+) -> TransactionReversal | None {
+    for reversal in [budget ->:HasReversal:->] {
+        if reversal.transaction_id == transaction_id and reversal.kind == kind {
+            return reversal;
         }
     }
     return None;

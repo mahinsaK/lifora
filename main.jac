@@ -2,7 +2,8 @@ import from services.finance {
     add_expense,
     add_income,
     get_finance,
-    get_transactions
+    get_transactions,
+    reverse_transaction
 }
 import from services.planning { WhatIfResponse, plan_student, simulate_plan }
 import from services.snapshot { get_student_snapshot }

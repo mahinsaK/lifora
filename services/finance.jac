@@ -9,11 +9,14 @@ import from services.state {
     HasIncome,
     Income,
     IncomeRecordResult,
+    TransactionReversalResult,
+    TransactionReversal,
     TransactionView,
     HasExpense,
     find_budget,
     find_expense,
     find_income,
+    find_reversal,
     find_student,
     initialize_expense,
     normalize_expense_date,
@@ -26,7 +29,7 @@ def build_finance_view(budget: Budget) -> FinanceView {
     spent_today = 0.0;
     today = date.today().isoformat();
     for expense in [budget ->:HasExpense:->] {
-        if expense.spent_on == today {
+        if expense.spent_on == today and find_reversal(budget, expense.expense_id, "EXPENSE") is None {
             spent_today += expense.amount;
         }
     }
@@ -63,27 +66,112 @@ def get_student_transactions(student_id: str) -> list[TransactionView] {
     }
     transactions: list[TransactionView] = [];
     for expense in [budget ->:HasExpense:->] {
+        reversal = find_reversal(budget, expense.expense_id, "EXPENSE");
         transactions.append(TransactionView(
             id=expense.expense_id,
             kind="EXPENSE",
             amount=expense.amount,
             description=expense.description,
-            occurred_on=expense.spent_on
+            occurred_on=expense.spent_on,
+            reversed=reversal is not None,
+            reversed_on=reversal.reversed_on if reversal else ""
         ));
     }
     for income in [budget ->:HasIncome:->] {
+        reversal = find_reversal(budget, income.income_id, "INCOME");
         transactions.append(TransactionView(
             id=income.income_id,
             kind="INCOME",
             amount=income.amount,
             description=income.description,
-            occurred_on=income.received_on
+            occurred_on=income.received_on,
+            reversed=reversal is not None,
+            reversed_on=reversal.reversed_on if reversal else ""
         ));
     }
     return sorted(
         transactions,
         key=lambda (item: TransactionView) { item.occurred_on + item.id; },
         reverse=True
+    );
+}
+
+
+def reverse_student_transaction(
+    student_id: str,
+    transaction_id: str,
+    kind: str
+) -> TransactionReversalResult {
+    if not transaction_id.strip() {
+        raise ValueError("Transaction ID is required.");
+    }
+    normalized_kind = kind.strip().upper();
+    if normalized_kind not in ["EXPENSE", "INCOME"] {
+        raise ValueError("Transaction kind must be EXPENSE or INCOME.");
+    }
+    student = find_student(student_id);
+    if student is None {
+        raise ValueError(f"Student '{student_id}' was not found.");
+    }
+    budget = find_budget(student);
+    if budget is None {
+        raise ValueError(f"Budget for student '{student_id}' was not found.");
+    }
+    reversed_on = date.today().isoformat();
+    if normalized_kind == "EXPENSE" {
+        expense = find_expense(budget, transaction_id);
+        if expense is None {
+            raise ValueError(f"Expense '{transaction_id}' was not found.");
+        }
+        if find_reversal(budget, transaction_id, normalized_kind) is not None {
+            raise ValueError(f"Expense '{transaction_id}' is already reversed.");
+        }
+        _ = budget +>:HasReversal():+> TransactionReversal(
+            transaction_id=transaction_id,
+            kind=normalized_kind,
+            reversed_on=reversed_on
+        );
+        budget.remaining_budget += expense.amount;
+        transaction = TransactionView(
+            id=expense.expense_id,
+            kind="EXPENSE",
+            amount=expense.amount,
+            description=expense.description,
+            occurred_on=expense.spent_on,
+            reversed=True,
+            reversed_on=reversed_on
+        );
+    } else {
+        income = find_income(budget, transaction_id);
+        if income is None {
+            raise ValueError(f"Income '{transaction_id}' was not found.");
+        }
+        if find_reversal(budget, transaction_id, normalized_kind) is not None {
+            raise ValueError(f"Income '{transaction_id}' is already reversed.");
+        }
+        if budget.remaining_budget < income.amount {
+            raise ValueError("This income cannot be reversed because some of those funds have already been spent.");
+        }
+        _ = budget +>:HasReversal():+> TransactionReversal(
+            transaction_id=transaction_id,
+            kind=normalized_kind,
+            reversed_on=reversed_on
+        );
+        budget.weekly_budget -= income.amount;
+        budget.remaining_budget -= income.amount;
+        transaction = TransactionView(
+            id=income.income_id,
+            kind="INCOME",
+            amount=income.amount,
+            description=income.description,
+            occurred_on=income.received_on,
+            reversed=True,
+            reversed_on=reversed_on
+        );
+    }
+    return TransactionReversalResult(
+        transaction=transaction,
+        finance=build_finance_view(budget)
     );
 }
 
@@ -206,5 +294,17 @@ def:pub add_income(
         amount=amount,
         description=description,
         received_on=received_on
+    );
+}
+
+
+def:pub reverse_transaction(
+    transaction_id: str,
+    kind: str
+) -> TransactionReversalResult {
+    return reverse_student_transaction(
+        student_id=DEMO_STUDENT_ID,
+        transaction_id=transaction_id,
+        kind=kind
     );
 }
