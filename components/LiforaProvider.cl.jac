@@ -88,7 +88,10 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         booting = False;
     }
 
-    async def plan_for(current: StudentSnapshot) -> None {
+    async def plan_for(
+        current: StudentSnapshot,
+        confirmation: str = ""
+    ) -> None {
         older = plan;
         planning = True;
         planError = "";
@@ -108,15 +111,50 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
             lastRun = now_label();
             stale = False;
             reset_what_if();
+            if confirmation {
+                toast.success(
+                    confirmation,
+                    {
+                        "description": "Your latest coursework, spending, and focus time were checked."
+                    }
+                );
+            }
         } except Exception as err {
             planError = "Lifora's reasoning is unavailable right now.";
+            if confirmation {
+                toast.error(
+                    "Couldn't refresh your decision",
+                    {"description": error_text(err)}
+                );
+            }
         }
         planning = False;
     }
 
     async def run_plan -> None {
-        if snapshot {
-            await plan_for(snapshot);
+        if not snapshot {
+            return;
+        }
+
+        was_rerun = plan is not None;
+        planning = True;
+        planError = "";
+        try {
+            # A manual rerun must use persisted data, not a possibly stale
+            # browser snapshot. The extra request also makes progress visible.
+            fresh = await get_student_snapshot();
+            snapshot = fresh;
+            await plan_for(
+                fresh,
+                "Decision refreshed" if was_rerun else "Decision ready"
+            );
+        } except Exception as err {
+            planning = False;
+            planError = "We couldn't refresh your latest student data.";
+            toast.error(
+                "Couldn't refresh your decision",
+                {"description": error_text(err)}
+            );
         }
     }
 
