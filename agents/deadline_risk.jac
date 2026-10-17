@@ -61,15 +61,27 @@ def assess_deadline_risk(
 
     capacity_used = estimated_remaining_hours / usable_hours;
     if capacity_used >= 0.8 {
+        if progress >= 90.0 {
+            return RiskLevel.MEDIUM;
+        }
         return RiskLevel.HIGH;
     }
     if capacity_used >= 0.5 {
         if importance >= 4 {
+            if progress >= 90.0 {
+                return RiskLevel.MEDIUM;
+            }
             return RiskLevel.HIGH;
+        }
+        if progress >= 90.0 {
+            return RiskLevel.LOW;
         }
         return RiskLevel.MEDIUM;
     }
     if importance == 5 and hours_remaining <= 24.0 {
+        if progress >= 90.0 {
+            return RiskLevel.LOW;
+        }
         return RiskLevel.MEDIUM;
     }
     return RiskLevel.LOW;

@@ -65,6 +65,9 @@ def calculate_budget_pressure(
         return RiskLevel.CRITICAL;
     }
 
+    if daily_allowance > 0.0 and spent_today >= daily_allowance * 3.0 {
+        return RiskLevel.CRITICAL;
+    }
     if spent_today > daily_allowance {
         return RiskLevel.HIGH;
     }
@@ -151,11 +154,15 @@ def build_finance_result(
     );
 }
 
-def run_finance_agent(finance: FinanceSnapshot) -> AgentResult {
+def run_finance_agent(
+    finance: FinanceSnapshot,
+    narrative_generator:
+        Callable[[FinanceAssessment], SpecialistNarrative] = generate_finance_narrative
+) -> AgentResult {
     assessment = assess_finances(finance);
     narrative = fallback_finance_narrative(assessment);
     try {
-        narrative = generate_finance_narrative(assessment);
+        narrative = narrative_generator(assessment);
     } except (
         AuthenticationError,
         RateLimitError,

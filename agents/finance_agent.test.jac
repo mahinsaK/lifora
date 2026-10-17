@@ -30,6 +30,20 @@ test "healthy spending produces low finance pressure" {
     assert assessment.urgency == UrgencyLevel.LOW;
 }
 
+test "large added expense escalates demo pressure to critical" {
+    snapshot = build_demo_snapshot();
+    snapshot.finance.remaining_budget -= 1000.0;
+    snapshot.finance.spent_today += 1000.0;
+    assessment = assess_finances(snapshot.finance);
+
+    assert assessment.total_spent == 4500.0;
+    assert assessment.remaining_budget == 2500.0;
+    assert assessment.recommended_daily_allowance == 625.0;
+    assert assessment.budget_pressure == RiskLevel.CRITICAL;
+    assert assessment.urgency == UrgencyLevel.CRITICAL;
+    assert "Pause optional spending" in assessment.candidate_next_action;
+}
+
 test "overspending produces critical finance pressure" {
     assessment = assess_finances(
         FinanceSnapshot(

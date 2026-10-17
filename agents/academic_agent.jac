@@ -177,12 +177,19 @@ def build_academic_result(
 }
 
 def run_academic_agent(
-    current_time: str, tasks: list[AcademicTask], available_hours: float
+    current_time: str,
+    tasks: list[AcademicTask],
+    available_hours: float,
+    narrative_generator:
+        Callable[
+            [AcademicAssessment],
+            SpecialistNarrative
+        ] = generate_academic_narrative
 ) -> AgentResult {
     assessment = assess_academic_tasks(current_time, tasks, available_hours);
     narrative = fallback_academic_narrative(assessment);
     try {
-        narrative = generate_academic_narrative(assessment);
+        narrative = narrative_generator(assessment);
     } except (
         AuthenticationError,
         RateLimitError,

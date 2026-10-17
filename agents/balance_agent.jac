@@ -181,12 +181,15 @@ def build_balance_result(
 }
 
 def run_balance_agent(
-    proposed_work_hours: float, available_hours: float
+    proposed_work_hours: float,
+    available_hours: float,
+    narrative_generator:
+        Callable[[BalanceAssessment], SpecialistNarrative] = generate_balance_narrative
 ) -> AgentResult {
     assessment = assess_balance(proposed_work_hours, available_hours);
     narrative = fallback_balance_narrative(assessment);
     try {
-        narrative = generate_balance_narrative(assessment);
+        narrative = narrative_generator(assessment);
     } except (
         AuthenticationError,
         RateLimitError,

@@ -360,12 +360,17 @@ def run_coordinator(
     snapshot: StudentSnapshot,
     academic: AgentResult,
     finance: AgentResult,
-    balance: AgentResult
+    balance: AgentResult,
+    narrative_generator:
+        Callable[
+            [CoordinatorPreparation],
+            CoordinatorNarrative
+        ] = generate_coordinator_narrative
 ) -> CoordinatorResult {
     preparation = prepare_coordination(snapshot, academic, finance, balance);
     narrative = fallback_coordinator_narrative(preparation);
     try {
-        generated = generate_coordinator_narrative(preparation);
+        generated = narrative_generator(preparation);
         if coordinator_narrative_is_safe(generated, preparation) {
             narrative = generated;
         }

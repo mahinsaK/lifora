@@ -66,6 +66,13 @@ obj CoordinatorResult {
         deprioritized: list[str];
 }
 
+obj PlanningResponse {
+    has academic: AgentResult,
+        finance: AgentResult,
+        balance: AgentResult,
+        coordinator: CoordinatorResult;
+}
+
 obj SpecialistNarrative {
     has summary: str,
         recommendation: str,

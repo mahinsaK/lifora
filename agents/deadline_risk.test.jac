@@ -42,6 +42,14 @@ test "high importance escalates moderate capacity pressure" {
     assert risk == RiskLevel.HIGH;
 }
 
+test "near-complete progress reduces achievable deadline pressure" {
+    risk = assess_deadline_risk(
+        FIXED_NOW, "2026-10-18T23:59:00+05:30", 90.0, 3.0, 5.0, 5
+    );
+
+    assert risk == RiskLevel.MEDIUM;
+}
+
 test "work exceeding available time is critical" {
     risk = assess_deadline_risk(
         FIXED_NOW, "2026-10-18T18:00:00+05:30", 40.0, 4.0, 3.0, 5
