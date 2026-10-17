@@ -10,6 +10,11 @@ glob ML_ASSIGNMENT_ID: str = "ml-assignment";
 glob ML_ASSIGNMENT_TITLE: str = "Machine Learning Assignment";
 glob DSA_QUIZ_ID: str = "dsa-quiz";
 glob DSA_QUIZ_TITLE: str = "DSA Quiz";
+glob DEMO_WEEKLY_BUDGET: float = 7000.0;
+glob DEMO_REMAINING_BUDGET: float = 3500.0;
+glob DEMO_DAYS_REMAINING: int = 4;
+glob DEMO_PRIOR_EXPENSE_ID: str = "demo-prior-expense";
+glob DEMO_TODAY_EXPENSE_ID: str = "demo-today-expense";
 
 
 obj ProfileView {
@@ -47,6 +52,40 @@ obj AcademicTaskView {
 
 obj TaskInitializationResult {
     has task: AcademicTaskView;
+    has created: bool;
+}
+
+
+obj FinanceView {
+    has weekly_budget: float;
+    has remaining_budget: float;
+    has spent_today: float;
+    has days_remaining: int;
+}
+
+
+obj ExpenseView {
+    has id: str;
+    has amount: float;
+    has description: str;
+    has spent_on: str;
+}
+
+
+obj ExpenseRecordResult {
+    has expense: ExpenseView;
+    has finance: FinanceView;
+}
+
+
+obj BudgetInitializationResult {
+    has budget: Budget;
+    has created: bool;
+}
+
+
+obj ExpenseInitializationResult {
+    has expense: Expense;
     has created: bool;
 }
 
@@ -92,7 +131,33 @@ node AcademicTask {
 }
 
 
+node Budget {
+    has weekly_budget: float;
+    has remaining_budget: float;
+    has days_remaining: int;
+}
+
+
+node Expense {
+    has expense_id: str;
+    has amount: float;
+    has description: str;
+    has spent_on: str;
+
+    def to_view -> ExpenseView {
+        return ExpenseView(
+            id=self.expense_id,
+            amount=self.amount,
+            description=self.description,
+            spent_on=self.spent_on
+        );
+    }
+}
+
+
 edge HasAcademicTask: Student --> AcademicTask {}
+edge HasBudget: Student --> Budget {}
+edge HasExpense: Budget --> Expense {}
 
 
 def validate_available_hours(available_hours_today: float) {
@@ -118,6 +183,51 @@ def normalize_deadline(deadline: str) -> str {
 }
 
 
+def validate_budget_values(
+    weekly_budget: float,
+    remaining_budget: float,
+    days_remaining: int
+) {
+    if weekly_budget < 0.0 {
+        raise ValueError("Weekly budget cannot be negative.");
+    }
+    if remaining_budget < 0.0 or remaining_budget > weekly_budget {
+        raise ValueError(
+            "Remaining budget must be between 0 and the weekly budget."
+        );
+    }
+    if days_remaining < 0 or days_remaining > 7 {
+        raise ValueError("Days remaining must be between 0 and 7.");
+    }
+}
+
+
+def validate_expense_values(
+    expense_id: str,
+    amount: float,
+    description: str
+) {
+    if not expense_id.strip() {
+        raise ValueError("Expense ID is required.");
+    }
+    if amount <= 0.0 {
+        raise ValueError("Expense amount must be greater than zero.");
+    }
+    if not description.strip() {
+        raise ValueError("Expense description is required.");
+    }
+}
+
+
+def normalize_expense_date(spent_on: str) -> str {
+    try {
+        return date.fromisoformat(spent_on).isoformat();
+    } except ValueError {
+        raise ValueError("Expense date must use ISO date format YYYY-MM-DD.");
+    }
+}
+
+
 def find_student(student_id: str) -> Student | None {
     for student in [root -->[?:Student]] {
         if student.student_id == student_id {
@@ -135,6 +245,22 @@ def find_academic_task(
     for task in [student ->:HasAcademicTask:->] {
         if task.task_id == task_id {
             return task;
+        }
+    }
+    return None;
+}
+
+
+def find_budget(student: Student) -> Budget | None {
+    budgets = [student ->:HasBudget:->];
+    return budgets[0] if budgets else None;
+}
+
+
+def find_expense(budget: Budget, expense_id: str) -> Expense | None {
+    for expense in [budget ->:HasExpense:->] {
+        if expense.expense_id == expense_id {
+            return expense;
         }
     }
     return None;
@@ -246,6 +372,81 @@ def initialize_demo_academic_tasks(student: Student) {
 }
 
 
+def initialize_budget(
+    student: Student,
+    weekly_budget: float,
+    remaining_budget: float,
+    days_remaining: int
+) -> BudgetInitializationResult {
+    validate_budget_values(
+        weekly_budget,
+        remaining_budget,
+        days_remaining
+    );
+    existing = find_budget(student);
+    if existing is not None {
+        return BudgetInitializationResult(budget=existing, created=False);
+    }
+    budget = student +>:HasBudget():+> Budget(
+        weekly_budget=weekly_budget,
+        remaining_budget=remaining_budget,
+        days_remaining=days_remaining
+    );
+    return BudgetInitializationResult(budget=budget, created=True);
+}
+
+
+def initialize_expense(
+    budget: Budget,
+    expense_id: str,
+    amount: float,
+    description: str,
+    spent_on: str
+) -> ExpenseInitializationResult {
+    validate_expense_values(expense_id, amount, description);
+    normalized_date = normalize_expense_date(spent_on);
+    existing = find_expense(budget, expense_id);
+    if existing is not None {
+        return ExpenseInitializationResult(
+            expense=existing,
+            created=False
+        );
+    }
+    expense = budget +>:HasExpense():+> Expense(
+        expense_id=expense_id,
+        amount=amount,
+        description=description,
+        spent_on=normalized_date
+    );
+    return ExpenseInitializationResult(expense=expense, created=True);
+}
+
+
+def initialize_demo_finance(student: Student) {
+    budget_result = initialize_budget(
+        student=student,
+        weekly_budget=DEMO_WEEKLY_BUDGET,
+        remaining_budget=DEMO_REMAINING_BUDGET,
+        days_remaining=DEMO_DAYS_REMAINING
+    );
+    today = date.today();
+    _ = initialize_expense(
+        budget_result.budget,
+        DEMO_PRIOR_EXPENSE_ID,
+        2000.0,
+        "Earlier weekly spending",
+        (today - timedelta(days=1)).isoformat()
+    );
+    _ = initialize_expense(
+        budget_result.budget,
+        DEMO_TODAY_EXPENSE_ID,
+        1500.0,
+        "Today's spending",
+        today.isoformat()
+    );
+}
+
+
 def update_student_available_time(
     student_id: str,
     available_hours_today: float
@@ -272,6 +473,7 @@ def:pub initialize_demo_state -> StateInitializationResult {
         raise RuntimeError("Demo student initialization failed.");
     }
     initialize_demo_academic_tasks(student);
+    initialize_demo_finance(student);
     return result;
 }
 
