@@ -113,9 +113,9 @@ def:pub DemoPath(
             <div className="flex items-start gap-3">
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground"><HugeiconsIcon icon={SparklesIcon} strokeWidth={2} className="size-5" /></span>
                 <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-primary">60-second demo</p>
-                    <h2 id="demo-path" className="text-lg font-semibold">See Lifora adapt to real life</h2>
-                    <p className="text-sm text-muted-foreground">Follow three steps to see planning, automatic replanning, and safe simulation.</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-primary">See how Lifora works</p>
+                    <h2 id="demo-path" className="text-lg font-semibold">Try the complete decision flow</h2>
+                    <p className="text-sm text-muted-foreground">Try planning, automatic replanning, and a safe What-If scenario.</p>
                 </div>
             </div>
             <ol className="grid gap-3 md:grid-cols-3">
@@ -123,7 +123,7 @@ def:pub DemoPath(
                 <li className="rounded-xl border bg-background/80 p-4"><span className="text-xs font-semibold text-primary">02 · Adapt</span><p className="mt-1 text-sm font-medium">Log a surprise expense</p><Button size="sm" variant="outline" className="mt-3 w-full" onClick={lambda (e: MouseEvent) { onExpense(); }}>Add expense</Button></li>
                 <li className="rounded-xl border bg-background/80 p-4"><span className="text-xs font-semibold text-primary">03 · Explore</span><p className="mt-1 text-sm font-medium">Test a change without saving it</p><Link to="/whatif" className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border bg-background px-3 text-sm font-medium hover:bg-muted">Open What-If <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" /></Link></li>
             </ol>
-            <p className="flex items-center gap-2 text-xs text-muted-foreground"><HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} className="size-4" />The demo uses the visible sample student data. What-If scenarios never alter saved data.</p>
+            <p className="flex items-center gap-2 text-xs text-muted-foreground"><HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} className="size-4" />Planning and updates use the visible student data. What-If scenarios never alter saved data.</p>
         </div>
     </section>;
 }
