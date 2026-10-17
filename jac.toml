@@ -1,6 +1,7 @@
 [project]
 name = "empty"
 version = "0.0.1"
+jac-version = "==0.34.24"
 description = "Empty Jac project - start from scratch"
 entry-point = "main"
 kind = "web-app"
@@ -13,9 +14,9 @@ api_key = "${OPENAI_API_KEY:-}"
 
 [jac-shadcn]
 style = "nova"
-baseColor = "neutral"
-theme = "teal"
-font = "figtree"
+baseColor = "stone"
+theme = "orange"
+font = "inter"
 radius = "default"
 menuAccent = "subtle"
 menuColor = "default"
@@ -66,6 +67,9 @@ watchdog = ">=3.0.0"
 
 [serve]
 base_route_app = "app"
+
+[scale.microservices]
+enabled = false
 
 [client]
 [client.vite]
