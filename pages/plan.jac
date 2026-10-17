@@ -41,9 +41,7 @@ def:pub PlanPage -> JsxPage {
 
         {if not plan {
             <NoPlanYet what="plan" planning={planning} disabled={app["booting"] or not snapshot} onRun={app["runPlan"]} />
-            skip;
-        }}
-
+        } else {
         <div className={"flex flex-col gap-6 transition-opacity " + ("pointer-events-none opacity-60" if planning else "")}>
             <NextAction
                 coordinator={plan.coordinator}
@@ -88,5 +86,6 @@ def:pub PlanPage -> JsxPage {
                 </div>
             </details>
         </div>
+        }}
     </div>;
 }

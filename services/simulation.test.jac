@@ -1,4 +1,7 @@
+import asyncio;
 import from agents.mock_snapshot { build_demo_snapshot }
+import from services.snapshot { get_student_snapshot }
+import from services.state { initialize_demo_state }
 import from test_support { assert_value_error }
 
 test "what-if scenarios modify copies and preserve the source snapshot" {
@@ -22,4 +25,19 @@ test "what-if simulation rejects unknown scenarios" {
         lambda { build_simulated_snapshot(build_demo_snapshot(), "unknown"); },
         "Unknown simulation scenario"
     );
+}
+
+
+test "public simulation runs without mutating persisted state" {
+    _ = initialize_demo_state();
+    before = get_student_snapshot();
+    result = asyncio.run(simulate_plan("less_time"));
+    after = get_student_snapshot();
+
+    assert result.snapshot.available_time.available_hours_today == max(
+        0.0, before.available_time.available_hours_today - 2.0
+    );
+    assert result.plan.coordinator.next_action;
+    assert after.available_time.available_hours_today == before.available_time.available_hours_today;
+    assert after.finance.remaining_budget == before.finance.remaining_budget;
 }

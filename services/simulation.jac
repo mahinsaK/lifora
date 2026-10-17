@@ -71,7 +71,7 @@ def build_simulated_snapshot(snapshot: StudentSnapshot, scenario: str) -> Studen
 }
 
 async def:pub simulate_plan(scenario: str) -> SimulationResult {
-    current = await get_student_snapshot();
+    current = get_student_snapshot();
     simulated = build_simulated_snapshot(current, scenario);
     plan = await plan_student(simulated);
     return SimulationResult(snapshot=simulated, plan=plan);
