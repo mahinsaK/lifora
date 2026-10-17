@@ -1,9 +1,9 @@
-import from "@jac/runtime" { Link }
 import from "@hugeicons/react" { HugeiconsIcon }
-import from "@hugeicons/core-free-icons" { AiNetworkIcon, ArrowRight01Icon }
+import from "@hugeicons/core-free-icons" { AiNetworkIcon, ArrowDown01Icon }
 import from ..components.NextAction { NextAction }
 import from ..components.DailyPlan { DailyPlan }
 import from ..components.BalanceCard { BalanceCard }
+import from ..components.DecisionTrace { DecisionTrace }
 import from ..components.ResultStates { ErrorBanner }
 import from ..components.PageParts { PageHeader, RunButton, NoPlanYet }
 import from ..components.LiforaProvider { useLifora }
@@ -64,20 +64,29 @@ def:pub PlanPage -> JsxPage {
                         previousUrgency={previous["balance"] or ""}
                         onEdit={lambda { set_dialog.call(None, "time"); }}
                     />}
-                    <Link to="/trace" className="group flex items-center justify-between gap-3 rounded-xl border bg-card p-4 shadow-sm transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+                    <a href="#why" className="group flex items-center justify-between gap-3 rounded-xl border bg-card p-4 shadow-sm transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
                         <span className="flex items-center gap-3">
                             <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                                 <HugeiconsIcon icon={AiNetworkIcon} strokeWidth={2} className="size-5" />
                             </span>
                             <span className="flex flex-col">
                                 <span className="text-sm font-semibold">Why this plan?</span>
-                                <span className="text-xs text-muted-foreground">See how the 3 agents disagreed and what won</span>
+                                <span className="text-xs text-muted-foreground">See what each specialist noticed</span>
                             </span>
                         </span>
-                        <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                    </Link>
+                        <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} className="size-4 text-muted-foreground transition-transform group-hover:translate-y-0.5" />
+                    </a>
                 </div>
             </div>
+            <details id="why" className="group rounded-2xl border bg-card shadow-sm">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 sm:px-6">
+                    <span className="flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><HugeiconsIcon icon={AiNetworkIcon} strokeWidth={2} className="size-5" /></span><span><span className="block font-semibold">Why Lifora chose this plan</span><span className="block text-sm text-muted-foreground">Academic, finance, and balance reasoning</span></span></span>
+                    <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} className="size-4 transition-transform group-open:rotate-180" />
+                </summary>
+                <div className="border-t p-4 sm:p-6">
+                    <DecisionTrace academic={plan.academic} finance={plan.finance} balance={plan.balance} coordinator={plan.coordinator} previous={previous} />
+                </div>
+            </details>
         </div>
     </div>;
 }

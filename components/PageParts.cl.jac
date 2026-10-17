@@ -95,7 +95,7 @@ def:pub NextActionSummary(plan: PlanningResponse, focusHours: float, previousAct
                     See tonight's plan
                     <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
                 </Link>
-                <Link to="/trace" className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border bg-card px-4 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+                <Link to="/plan#why" className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border bg-card px-4 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
                     Why this?
                 </Link>
             </div>

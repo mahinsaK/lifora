@@ -4,7 +4,6 @@ import from "@hugeicons/core-free-icons" {
     SparklesIcon,
     Home01Icon,
     Target02Icon,
-    AiNetworkIcon,
     Edit02Icon,
     SlidersHorizontalIcon
 }
@@ -13,8 +12,7 @@ import from .display { initials }
 
 glob NAV_ITEMS: list[dict[str, any]] = [
     {"to": "/", "label": "Overview", "icon": Home01Icon},
-    {"to": "/plan", "label": "Plan", "icon": Target02Icon},
-    {"to": "/trace", "label": "Decision Trace", "icon": AiNetworkIcon},
+    {"to": "/plan", "label": "My Plan", "icon": Target02Icon},
     {"to": "/update", "label": "Update", "icon": Edit02Icon},
     {"to": "/whatif", "label": "What-If", "icon": SlidersHorizontalIcon}
 ];
