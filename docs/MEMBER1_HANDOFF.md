@@ -120,10 +120,24 @@ The static checker still prints existing frontend JSX and untyped-props
 warnings. They are outside the Member 1 service scope and do not fail the
 check.
 
-## Integration boundary
+## Integration status
 
-`main.jac` has intentionally not been changed because it is a shared
-integration file requiring approval. The default deployed application must
-load `services/snapshot.jac` (directly or through the agreed application
-composition) before these public endpoints are exposed. That wiring belongs
-to Phase 7 integration support.
+Phase 7 imports `get_student_snapshot` from `services/snapshot.jac` in
+`main.jac`. This makes the snapshot module and all transitive state service
+endpoints part of the default web application without coupling persistence to
+the dashboard component.
+
+The agent implementation files are not present yet, so no agent-owned code was
+changed. Member 2 can consume `StudentSnapshot` and
+`build_student_snapshot(student_id)` directly from `services.snapshot` using
+the relative import appropriate to their agent module. The default application
+also exposes `POST /function/get_student_snapshot` for RPC consumers.
+
+Deployment-style local verification confirmed:
+
+- the frontend returns HTTP 200 on port 8000;
+- API health returns HTTP 200 on port 8001;
+- all eight state endpoints appear in OpenAPI;
+- initialization and snapshot retrieval succeed; and
+- the persisted initial snapshot remains available after restarting the
+  default application.
