@@ -215,6 +215,32 @@ def validate_task_progress(progress: float) {
 }
 
 
+def validate_academic_task_values(
+    task_id: str,
+    title: str,
+    deadline: str,
+    progress: float,
+    estimated_remaining_hours: float,
+    importance: int
+) -> str {
+    if not task_id.strip() {
+        raise ValueError("Task ID is required.");
+    }
+    if not title.strip() {
+        raise ValueError("Task title is required.");
+    }
+    normalized_deadline = normalize_deadline(deadline);
+    validate_task_progress(progress);
+    if estimated_remaining_hours < 0.0 {
+        raise ValueError("Estimated remaining hours cannot be negative.");
+    }
+    if importance < 1 or importance > 5 {
+        raise ValueError("Task importance must be between 1 and 5.");
+    }
+    return normalized_deadline;
+}
+
+
 def normalize_deadline(deadline: str) -> str {
     try {
         return date.fromisoformat(deadline).isoformat();
@@ -382,20 +408,9 @@ def initialize_academic_task(
     estimated_remaining_hours: float,
     importance: int
 ) -> TaskInitializationResult {
-    if not task_id.strip() {
-        raise ValueError("Task ID is required.");
-    }
-    if not title.strip() {
-        raise ValueError("Task title is required.");
-    }
-    normalized_deadline = normalize_deadline(deadline);
-    validate_task_progress(progress);
-    if estimated_remaining_hours < 0.0 {
-        raise ValueError("Estimated remaining hours cannot be negative.");
-    }
-    if importance < 1 or importance > 5 {
-        raise ValueError("Task importance must be between 1 and 5.");
-    }
+    normalized_deadline = validate_academic_task_values(
+        task_id, title, deadline, progress, estimated_remaining_hours, importance
+    );
 
     existing = find_academic_task(student, task_id);
     if existing is not None {

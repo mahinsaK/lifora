@@ -201,6 +201,38 @@ test "student can add a validated academic task exactly once" {
 }
 
 
+test "task details update atomically and task can be completed" {
+    student_id = "phase-edit-task-fixture";
+    student = create_task_test_student(student_id);
+    original_deadline = date.today().isoformat();
+    _ = initialize_academic_task(
+        student, "edit-me", "Original", original_deadline, 25.0, 4.0, 2
+    );
+    new_deadline = (date.today() + timedelta(days=5)).isoformat();
+    updated = update_student_academic_task(
+        student_id, "edit-me", "Updated title", new_deadline, 50.0, 2.5, 5
+    );
+    assert updated.title == "Updated title";
+    assert updated.deadline == new_deadline;
+    assert updated.progress == 50.0;
+    assert updated.estimated_remaining_hours == 2.5;
+    assert updated.importance == 5;
+
+    assert_value_error(
+        lambda { update_student_academic_task(
+            student_id, "edit-me", "", new_deadline, 80.0, 1.0, 3
+        ); },
+        "title is required"
+    );
+    preserved = find_academic_task(student, "edit-me");
+    assert preserved?.title == "Updated title";
+    assert preserved?.progress == 50.0;
+    completed = update_student_task_progress(student_id, "edit-me", 100.0);
+    assert completed.progress == 100.0;
+    remove_task_test_student(student_id);
+}
+
+
 test "demo academic seed creates the required tasks once" {
     student_id = "phase3-demo-seed-fixture";
     student = create_task_test_student(student_id);

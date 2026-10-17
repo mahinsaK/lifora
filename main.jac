@@ -13,7 +13,9 @@ import from services.state {
 }
 import from services.tasks {
     add_academic_task,
+    complete_academic_task,
     get_academic_tasks,
+    update_academic_task,
     update_task_progress
 }
 import ".styles.global.css";

@@ -8,7 +8,7 @@ import from react { createContext, useContext }
 import from "sonner" { toast }
 import from .display { PlanStep, parse_plan, level_of, fmt_clock, next_quarter_minutes }
 sv import from ..services.state { initialize_demo_state, update_available_time }
-sv import from ..services.tasks { add_academic_task, update_task_progress }
+sv import from ..services.tasks { add_academic_task, complete_academic_task, update_academic_task, update_task_progress }
 sv import from ..services.finance { add_expense, add_income, get_transactions }
 sv import from ..services.state { TransactionView }
 sv import from ..services.snapshot { StudentSnapshot, get_student_snapshot }
@@ -173,6 +173,41 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         }
     }
 
+    async def save_task_details(
+        task_id: str,
+        title: str,
+        deadline: str,
+        progress: float,
+        estimated_remaining_hours: float,
+        importance: int
+    ) -> None {
+        saving = True;
+        try {
+            await update_academic_task(
+                task_id, title, deadline, progress, estimated_remaining_hours, importance
+            );
+            changedTaskId = task_id;
+            saving = False;
+            await after_change("Task updated");
+        } except Exception as err {
+            saving = False;
+            toast.error("Couldn't update the task", {"description": error_text(err)});
+        }
+    }
+
+    async def complete_task(task_id: str) -> None {
+        saving = True;
+        try {
+            await complete_academic_task(task_id);
+            changedTaskId = task_id;
+            saving = False;
+            await after_change("Task completed");
+        } except Exception as err {
+            saving = False;
+            toast.error("Couldn't complete the task", {"description": error_text(err)});
+        }
+    }
+
     async def save_expense(amount: float, description: str) -> None {
         saving = True;
         before = snapshot.finance.remaining_budget if snapshot else -1.0;
@@ -256,6 +291,8 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         "clearPlanError": lambda { planError = ""; },
         "saveProgress": save_progress,
         "saveTask": save_task,
+        "saveTaskDetails": save_task_details,
+        "completeTask": complete_task,
         "saveExpense": save_expense,
         "saveIncome": save_income,
         "saveTime": save_time,

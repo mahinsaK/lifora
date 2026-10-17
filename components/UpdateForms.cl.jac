@@ -226,6 +226,72 @@ def:pub AddTaskForm(
 }
 
 
+def:pub EditTaskForm(
+    tasks: list[AcademicTaskView],
+    saving: bool,
+    onSave: Callable[[str, str, str, float, float, int], None],
+    onComplete: Callable[[str], None],
+    onCancel: Callable[[], None] | None = None
+) -> JsxElement {
+    has taskId: str = "",
+        title: str = "",
+        deadline: str = "",
+        progress: float = 0.0,
+        hoursText: str = "",
+        importance: int = 3;
+
+    can with [tasks] entry {
+        selected = [t for t in tasks if t.id == taskId];
+        task = selected[0] if len(selected) > 0 else (tasks[0] if len(tasks) > 0 else None);
+        if task {
+            taskId = task.id;
+            title = task.title;
+            deadline = task.deadline;
+            progress = task.progress;
+            hoursText = str(task.estimated_remaining_hours);
+            importance = task.importance;
+        }
+    }
+
+    def pick_task(task: AcademicTaskView) {
+        taskId = task.id;
+        title = task.title;
+        deadline = task.deadline;
+        progress = task.progress;
+        hoursText = str(task.estimated_remaining_hours);
+        importance = task.importance;
+    }
+    parsedHours = float(hoursText) if hoursText else -1.0;
+    hours = -1.0 if parsedHours != parsedHours else parsedHours;
+    valid = bool(taskId) and bool(title.strip()) and bool(deadline) and hours >= 0;
+
+    return <div className="flex flex-col gap-4">
+        <Field>
+            <FieldLabel>Task</FieldLabel>
+            <div className="flex flex-wrap gap-2">
+                {for task in tasks {
+                    <button key={task.id} type="button" onClick={lambda (e: MouseEvent) { pick_task(task); }} className={"rounded-lg border px-3 py-2 text-sm font-medium " + ("border-primary bg-primary/5" if task.id == taskId else "hover:bg-muted")}>{task.title}</button>
+                }}
+            </div>
+        </Field>
+        <Field><FieldLabel htmlFor="edit-task-title">Title</FieldLabel><Input id="edit-task-title" value={title} onChange={lambda (e: ChangeEvent) { title = e.target.value; }} /></Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+            <Field><FieldLabel htmlFor="edit-task-deadline">Deadline</FieldLabel><Input id="edit-task-deadline" type="date" value={deadline} onChange={lambda (e: ChangeEvent) { deadline = e.target.value; }} /></Field>
+            <Field><FieldLabel htmlFor="edit-task-hours">Hours remaining</FieldLabel><Input id="edit-task-hours" type="number" min="0" step="0.5" value={hoursText} onChange={lambda (e: ChangeEvent) { hoursText = e.target.value; }} /></Field>
+        </div>
+        <Field>
+            <FieldLabel>Importance</FieldLabel>
+            <div className="flex flex-wrap gap-2">{for level in [1, 2, 3, 4, 5] { <span key={str(level)}><Chip label={str(level)} active={importance == level} onPick={lambda { importance = level; }} /></span> }}</div>
+        </Field>
+        <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
+            {onCancel and <Button variant="ghost" onClick={lambda (e: MouseEvent) { onCancel(); }}>Cancel</Button>}
+            <Button variant="outline" disabled={saving or not taskId or progress >= 100} onClick={lambda (e: MouseEvent) { onComplete(taskId); }}>Mark completed</Button>
+            <Button disabled={saving or not valid} onClick={lambda (e: MouseEvent) { onSave(taskId, title.strip(), deadline, progress, hours, importance); }}>Save details</Button>
+        </div>
+    </div>;
+}
+
+
 def:pub ExpenseForm(
     remaining: float,
     saving: bool,
@@ -431,6 +497,8 @@ def:pub UpdateDialog(
     saving: bool,
     onClose: Callable[[], None],
     onSaveTask: Callable[[str, str, float, float, int], None],
+    onSaveTaskDetails: Callable[[str, str, str, float, float, int], None],
+    onCompleteTask: Callable[[str], None],
     onSaveIncome: Callable[[float, str, str], None],
     onSaveProgress: Callable[[str, float], None],
     onSaveExpense: Callable[[float, str], None],
@@ -443,6 +511,10 @@ def:pub UpdateDialog(
         title = "Add academic task";
         description = "Add a deadline so Lifora can prioritize it.";
         icon = PlusSignIcon;
+    } elif kind == "edit-task" {
+        title = "Edit academic task";
+        description = "Change task details or mark it complete.";
+        icon = ChartIncreaseIcon;
     } elif kind == "income" {
         title = "Add income";
         description = "Add funds to this week's available budget.";
@@ -476,6 +548,7 @@ def:pub UpdateDialog(
             </DialogHeader>
             {kind == "progress" and <ProgressForm tasks={tasks} saving={saving} onSave={onSaveProgress} onCancel={onClose} />}
             {kind == "task" and <AddTaskForm saving={saving} onSave={onSaveTask} onCancel={onClose} />}
+            {kind == "edit-task" and <EditTaskForm tasks={tasks} saving={saving} onSave={onSaveTaskDetails} onComplete={onCompleteTask} onCancel={onClose} />}
             {kind == "income" and <IncomeForm saving={saving} onSave={onSaveIncome} onCancel={onClose} />}
             {kind == "expense" and <ExpenseForm remaining={remaining} saving={saving} onSave={onSaveExpense} onCancel={onClose} />}
             {kind == "time" and <TimeForm hours={hours} saving={saving} onSave={onSaveTime} onCancel={onClose} />}

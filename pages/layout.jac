@@ -30,6 +30,8 @@ def:pub Shell -> JsxLayout {
             saving={app["saving"]}
             onClose={lambda { set_dialog.call(None, ""); }}
             onSaveTask={app["saveTask"]}
+            onSaveTaskDetails={app["saveTaskDetails"]}
+            onCompleteTask={app["completeTask"]}
             onSaveIncome={app["saveIncome"]}
             onSaveProgress={app["saveProgress"]}
             onSaveExpense={app["saveExpense"]}

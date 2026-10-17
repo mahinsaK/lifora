@@ -7,6 +7,7 @@ import from services.state {
     find_academic_task,
     find_student,
     initialize_academic_task,
+    validate_academic_task_values,
     validate_task_progress
 }
 
@@ -77,6 +78,35 @@ def add_student_academic_task(
 }
 
 
+def update_student_academic_task(
+    student_id: str,
+    task_id: str,
+    title: str,
+    deadline: str,
+    progress: float,
+    estimated_remaining_hours: float,
+    importance: int
+) -> AcademicTaskView {
+    normalized_deadline = validate_academic_task_values(
+        task_id, title, deadline, progress, estimated_remaining_hours, importance
+    );
+    student = find_student(student_id);
+    if student is None {
+        raise ValueError(f"Student '{student_id}' was not found.");
+    }
+    task = find_academic_task(student, task_id);
+    if task is None {
+        raise ValueError(f"Academic task '{task_id}' was not found.");
+    }
+    task.title = title.strip();
+    task.deadline = normalized_deadline;
+    task.progress = progress;
+    task.estimated_remaining_hours = estimated_remaining_hours;
+    task.importance = importance;
+    return task.to_view();
+}
+
+
 def:pub get_academic_tasks -> list[AcademicTaskView] {
     return get_student_academic_tasks(DEMO_STUDENT_ID);
 }
@@ -111,4 +141,29 @@ def:pub add_academic_task(
         estimated_remaining_hours=estimated_remaining_hours,
         importance=importance
     );
+}
+
+
+def:pub update_academic_task(
+    task_id: str,
+    title: str,
+    deadline: str,
+    progress: float,
+    estimated_remaining_hours: float,
+    importance: int
+) -> AcademicTaskView {
+    return update_student_academic_task(
+        DEMO_STUDENT_ID,
+        task_id,
+        title,
+        deadline,
+        progress,
+        estimated_remaining_hours,
+        importance
+    );
+}
+
+
+def:pub complete_academic_task(task_id: str) -> AcademicTaskView {
+    return update_student_task_progress(DEMO_STUDENT_ID, task_id, 100.0);
 }

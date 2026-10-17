@@ -10,7 +10,7 @@ import from "@hugeicons/core-free-icons" {
 }
 import from ..components.ui.skeleton { Skeleton }
 import from ..components.ui.spinner { Spinner }
-import from ..components.UpdateForms { AddTaskForm, IncomeForm, ProgressForm, ExpenseForm, TimeForm, TransactionHistory, FormHeading }
+import from ..components.UpdateForms { AddTaskForm, EditTaskForm, IncomeForm, ProgressForm, ExpenseForm, TimeForm, TransactionHistory, FormHeading }
 import from ..components.PageParts { PageHeader }
 import from ..components.LiforaProvider { useLifora }
 
@@ -63,6 +63,10 @@ def:pub UpdatePage -> JsxPage {
             <section className="flex flex-col gap-5 rounded-xl border bg-card p-5 shadow-sm">
                 <FormHeading icon={PlusSignIcon} title="Add task" description="Create coursework with a deadline and effort estimate." />
                 <AddTaskForm saving={saving} onSave={app["saveTask"]} />
+            </section>
+            <section className="flex flex-col gap-5 rounded-xl border bg-card p-5 shadow-sm">
+                <FormHeading icon={ChartIncreaseIcon} title="Edit task details" description="Adjust task details or mark work complete." />
+                <EditTaskForm tasks={snapshot.academic_tasks} saving={saving} onSave={app["saveTaskDetails"]} onComplete={app["completeTask"]} />
             </section>
             <section className="flex flex-col gap-5 rounded-xl border bg-card p-5 shadow-sm">
                 <FormHeading icon={Wallet01Icon} title="Add income" description="Add funds to your weekly budget." />
