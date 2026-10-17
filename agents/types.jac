@@ -65,3 +65,18 @@ obj CoordinatorResult {
         conflicts: list[str],
         deprioritized: list[str];
 }
+
+obj SpecialistNarrative {
+    has summary: str,
+        recommendation: str,
+        explanation: str;
+}
+
+obj AcademicAssessment {
+    has risk_level: RiskLevel,
+        urgency: UrgencyLevel,
+        most_urgent_task_id: str,
+        most_urgent_task_title: str,
+        required_time: float,
+        candidate_next_action: str;
+}
