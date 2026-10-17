@@ -3,7 +3,7 @@
 Pure formatting only - no planning or scheduling decisions live here.
 """
 
-obj PlanStep {
+obj:pub PlanStep {
     has kind: str,
         title: str,
         hours: float,

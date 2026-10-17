@@ -1,7 +1,7 @@
 """Finance operations backed by Lifora's persistent student graph."""
 
 import from datetime { date }
-import from .state {
+import from services.state {
     Budget,
     DEMO_STUDENT_ID,
     ExpenseRecordResult,

@@ -7,6 +7,7 @@ import from jaclang.byllm.lib {
     RateLimitError
 }
 import from agents.deadline_risk { assess_deadline_risk, hours_before_deadline }
+import from agents.llm_support { openai_narratives_configured }
 import from services.state { AcademicTaskView as AcademicTask }
 import from agents.types {
     AcademicAssessment,
@@ -138,15 +139,36 @@ def assess_academic_tasks(
     );
 }
 
-sem generate_academic_narrative = """
+obj AcademicNarrativeDraft {
+    has summary: str,
+        recommendation: str,
+        explanation: str;
+}
+
+sem request_academic_narrative = """
 Write a concise academic summary, recommendation, and evidence-based explanation.
 Use only the supplied deterministic assessment. Preserve its selected task, risk,
 urgency, required time, and candidate next action; do not recalculate them.
 """;
 
-def generate_academic_narrative(assessment: AcademicAssessment) -> SpecialistNarrative by llm(
-    temperature=0.0, max_output_retries=1
-);
+def request_academic_narrative(
+    assessment: AcademicAssessment
+) -> AcademicNarrativeDraft by llm(temperature=0.0, max_output_retries=1);
+
+def generate_academic_narrative(assessment: AcademicAssessment) -> SpecialistNarrative {
+    if not openai_narratives_configured() {
+        return fallback_academic_narrative(assessment);
+    }
+    draft = request_academic_narrative(assessment);
+    if draft is None {
+        return fallback_academic_narrative(assessment);
+    }
+    return SpecialistNarrative(
+        summary=draft.summary,
+        recommendation=draft.recommendation,
+        explanation=draft.explanation
+    );
+}
 
 def fallback_academic_narrative(assessment: AcademicAssessment) -> SpecialistNarrative {
     if assessment.most_urgent_task_id == "" {
