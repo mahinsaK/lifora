@@ -5,9 +5,55 @@ import from jaclang.byllm.lib {
     MockRawResponse
 }
 import from agents.mock_snapshot { build_demo_snapshot }
+import from test_support { assert_value_error }
 
-glob llm = MockLLM(outputs=[]),
-     FIXED_ACADEMIC_NOW = "2026-10-17T18:00:00+05:30";
+glob FIXED_ACADEMIC_NOW = "2026-10-17T18:00:00+05:30";
+
+sem test_academic_success_narrative = "Mocked academic narrative for unit tests.";
+def test_academic_success_narrative(
+    assessment: AcademicAssessment
+) -> SpecialistNarrative by MockLLM(
+    model_name="mockllm",
+    config={
+        "outputs": [
+            SpecialistNarrative(
+                summary="The ML assignment has the strongest deadline pressure.",
+                recommendation="Start the ML assignment now.",
+                explanation="It is due first, has three hours remaining, and is only 40 percent complete."
+            )
+        ]
+    }
+)(
+    max_output_retries=1
+);
+
+sem test_academic_auth_failure = "Mocked academic authentication failure.";
+def test_academic_auth_failure(assessment: AcademicAssessment) -> SpecialistNarrative by MockLLM(
+    model_name="mockllm",
+    config={
+        "outputs": [
+            MockError(error=AuthenticationError(message="test API key failure"))
+        ]
+    }
+)();
+
+sem test_academic_conversion_failure = "Mocked academic conversion failure.";
+def test_academic_conversion_failure(
+    assessment: AcademicAssessment
+) -> SpecialistNarrative by MockLLM(
+    model_name="mockllm",
+    config={"outputs": [MockRawResponse(content="{"), MockRawResponse(content="{")]}
+)(
+    max_output_retries=1
+);
+
+sem test_academic_unexpected_failure = "Mocked unexpected academic failure.";
+def test_academic_unexpected_failure(
+    assessment: AcademicAssessment
+) -> SpecialistNarrative by MockLLM(
+    model_name="mockllm",
+    config={"outputs": [MockError(error=ValueError("unexpected test failure"))]}
+)();
 
 test "academic assessment selects the most urgent unfinished task" {
     snapshot = build_demo_snapshot();
@@ -61,20 +107,12 @@ test "academic result keeps deterministic fields locked" {
 }
 
 test "academic agent uses byLLM only for narrative fields" {
-    llm = MockLLM(
-        outputs=[
-            {
-                "summary": "The ML assignment has the strongest deadline pressure.",
-                "recommendation": "Start the ML assignment now.",
-                "explanation": "It is due first, has three hours remaining, and is only 40 percent complete."
-            }
-        ]
-    );
     snapshot = build_demo_snapshot();
     result = run_academic_agent(
         FIXED_ACADEMIC_NOW,
         snapshot.academic_tasks,
-        snapshot.available_time.available_hours_today
+        snapshot.available_time.available_hours_today,
+        test_academic_success_narrative
     );
 
     assert result.domain == Domain.ACADEMIC;
@@ -82,52 +120,48 @@ test "academic agent uses byLLM only for narrative fields" {
     assert result.urgency == UrgencyLevel.HIGH;
     assert result.required_time == 3.0;
     assert result.summary == "The ML assignment has the strongest deadline pressure.";
-    assert llm.exhausted();
 }
 
 test "academic agent falls back after authentication failure" {
-    llm = MockLLM(
-        outputs=[MockError(error=AuthenticationError(message="test API key failure"))]
-    );
     snapshot = build_demo_snapshot();
     result = run_academic_agent(
         FIXED_ACADEMIC_NOW,
         snapshot.academic_tasks,
-        snapshot.available_time.available_hours_today
+        snapshot.available_time.available_hours_today,
+        test_academic_auth_failure
     );
 
     assert result.risk_level == RiskLevel.HIGH;
     assert result.urgency == UrgencyLevel.HIGH;
     assert result.required_time == 3.0;
     assert "AI reasoning was unavailable" in result.reasoning;
-    assert llm.exhausted();
 }
 
 test "academic agent falls back after typed output conversion failure" {
-    llm = MockLLM(outputs=[MockRawResponse(content="{"), MockRawResponse(content="{")]);
     snapshot = build_demo_snapshot();
     result = run_academic_agent(
         FIXED_ACADEMIC_NOW,
         snapshot.academic_tasks,
-        snapshot.available_time.available_hours_today
+        snapshot.available_time.available_hours_today,
+        test_academic_conversion_failure
     );
 
     assert result.risk_level == RiskLevel.HIGH;
     assert result.urgency == UrgencyLevel.HIGH;
     assert result.required_time == 3.0;
     assert "AI reasoning was unavailable" in result.reasoning;
-    assert llm.exhausted();
 }
 
 test "academic agent does not silently catch unrelated failures" {
-    llm = MockLLM(outputs=[MockError(error=ValueError("unexpected test failure"))]);
     snapshot = build_demo_snapshot();
 
-    with testraises(ValueError) {
-        run_academic_agent(
+    assert_value_error(
+        lambda { run_academic_agent(
             FIXED_ACADEMIC_NOW,
             snapshot.academic_tasks,
-            snapshot.available_time.available_hours_today
-        );
-    }
+            snapshot.available_time.available_hours_today,
+            test_academic_unexpected_failure
+        ); },
+        "unexpected test failure"
+    );
 }

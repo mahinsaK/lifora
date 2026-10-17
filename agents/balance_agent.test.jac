@@ -6,9 +6,49 @@ import from jaclang.byllm.lib {
 }
 import from agents.academic_agent { assess_academic_tasks }
 import from agents.mock_snapshot { build_demo_snapshot }
+import from test_support { assert_value_error }
 
-glob llm = MockLLM(outputs=[]),
-     FIXED_BALANCE_NOW = "2026-10-17T18:00:00+05:30";
+glob FIXED_BALANCE_NOW = "2026-10-17T18:00:00+05:30";
+
+sem test_balance_success_narrative = "Mocked balance narrative for unit tests.";
+def test_balance_success_narrative(
+    assessment: BalanceAssessment
+) -> SpecialistNarrative by MockLLM(
+    model_name="mockllm",
+    config={
+        "outputs": [
+            SpecialistNarrative(
+                summary="The proposed workload exceeds realistic focus capacity.",
+                recommendation="Reduce the work block and defer the remainder.",
+                explanation="The proposal does not fit after breaks and buffer time."
+            )
+        ]
+    }
+)();
+
+sem test_balance_configuration_failure = "Mocked balance configuration failure.";
+def test_balance_configuration_failure(
+    assessment: BalanceAssessment
+) -> SpecialistNarrative by MockLLM(
+    model_name="mockllm",
+    config={
+        "outputs": [
+            MockError(error=ConfigurationError(message="test configuration failure"))
+        ]
+    }
+)();
+
+sem test_balance_finish_tool_failure = "Mocked balance finish-tool failure.";
+def test_balance_finish_tool_failure(
+    assessment: BalanceAssessment
+) -> SpecialistNarrative by MockLLM(
+    model_name="mockllm",
+    config={
+        "outputs": [
+            MockError(error=FinishToolError(message="test finish-tool failure"))
+        ]
+    }
+)();
 
 test "work fitting the evening includes breaks and buffer" {
     assessment = assess_balance(3.0, 5.0);
@@ -42,12 +82,8 @@ test "a nearly full but feasible schedule has medium pressure" {
 }
 
 test "invalid balance hours are rejected" {
-    with testraises(ValueError) {
-        assess_balance(-1.0, 3.0);
-    }
-    with testraises(ValueError) {
-        assess_balance(1.0, -3.0);
-    }
+    assert_value_error(lambda { assess_balance(-1.0, 3.0); });
+    assert_value_error(lambda { assess_balance(1.0, -3.0); });
 }
 
 test "balance assessment can disagree with academic required time" {
@@ -79,49 +115,29 @@ test "balance result keeps deterministic fields locked" {
 }
 
 test "balance agent uses byLLM only for narrative fields" {
-    llm = MockLLM(
-        outputs=[
-            {
-                "summary": "The proposed workload exceeds realistic focus capacity.",
-                "recommendation": "Reduce the work block and defer the remainder.",
-                "explanation": "The proposal does not fit after breaks and buffer time."
-            }
-        ]
-    );
-    result = run_balance_agent(4.0, 3.0);
+    result = run_balance_agent(4.0, 3.0, test_balance_success_narrative);
 
     assert result.domain == Domain.BALANCE;
     assert result.risk_level == RiskLevel.CRITICAL;
     assert result.urgency == UrgencyLevel.CRITICAL;
     assert abs(result.required_time - 2.45) < 0.001;
     assert result.summary == "The proposed workload exceeds realistic focus capacity.";
-    assert llm.exhausted();
 }
 
 test "balance agent falls back after configuration failure" {
-    llm = MockLLM(
-        outputs=[
-            MockError(error=ConfigurationError(message="test configuration failure"))
-        ]
-    );
-    result = run_balance_agent(4.0, 3.0);
+    result = run_balance_agent(4.0, 3.0, test_balance_configuration_failure);
 
     assert result.risk_level == RiskLevel.CRITICAL;
     assert result.urgency == UrgencyLevel.CRITICAL;
     assert abs(result.required_time - 2.45) < 0.001;
     assert "AI reasoning was unavailable" in result.reasoning;
-    assert llm.exhausted();
 }
 
 test "balance agent falls back after finish-tool failure" {
-    llm = MockLLM(
-        outputs=[MockError(error=FinishToolError(message="test finish-tool failure"))]
-    );
-    result = run_balance_agent(4.0, 3.0);
+    result = run_balance_agent(4.0, 3.0, test_balance_finish_tool_failure);
 
     assert result.risk_level == RiskLevel.CRITICAL;
     assert result.urgency == UrgencyLevel.CRITICAL;
     assert abs(result.required_time - 2.45) < 0.001;
     assert "AI reasoning was unavailable" in result.reasoning;
-    assert llm.exhausted();
 }

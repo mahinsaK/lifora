@@ -14,13 +14,14 @@ import from .state {
     initialize_student,
     update_student_available_time
 }
+import from test_support { assert_value_error }
 
 
 def remove_finance_test_student(student_id: str) {
     student = find_student(student_id);
     if student is not None {
-        for budget in [student ->:HasBudget:->] {
-            for expense in [budget ->:HasExpense:->] {
+        for budget in [student->:HasBudget:->] {
+            for expense in [budget->:HasExpense:->] {
                 del expense;
             }
             del budget;
@@ -63,7 +64,7 @@ test "demo finance seed is idempotent and preserves mutations" {
     }
     assert find_expense(budget, DEMO_PRIOR_EXPENSE_ID) is not None;
     assert find_expense(budget, DEMO_TODAY_EXPENSE_ID) is not None;
-    assert len([budget ->:HasExpense:->]) == 2;
+    assert len([budget->:HasExpense:->]) == 2;
 
     _ = record_student_expense(
         student_id, "demo-new-expense", 1000.0, "Course materials"
@@ -95,11 +96,10 @@ test "expense updates budget once and repeated reads are safe" {
     second_read = get_student_finance(student_id);
     assert first_read.remaining_budget == 2500.0;
     assert second_read.remaining_budget == 2500.0;
-    with testraises(ValueError, `match="already exists") {
-        record_student_expense(
-            student_id, "books-1000", 1000.0, "Books"
-        );
-    }
+    assert_value_error(
+        lambda { record_student_expense(student_id, "books-1000", 1000.0, "Books"); },
+        "already exists"
+    );
     assert get_student_finance(student_id).remaining_budget == 2500.0;
     remove_finance_test_student(student_id);
 }
@@ -125,25 +125,28 @@ test "finance operations reject invalid expenses and missing budgets" {
     student = create_finance_test_student(student_id);
     _ = initialize_budget(student, 7000.0, 3500.0, 4);
 
-    with testraises(ValueError, `match="greater than zero") {
-        record_student_expense(student_id, "negative", -1.0, "Invalid");
-    }
-    with testraises(ValueError, `match="description is required") {
-        record_student_expense(student_id, "empty-description", 10.0, "");
-    }
-    with testraises(ValueError, `match="ISO date format") {
-        record_student_expense(
+    assert_value_error(
+        lambda { record_student_expense(student_id, "negative", -1.0, "Invalid"); },
+        "greater than zero"
+    );
+    assert_value_error(
+        lambda { record_student_expense(student_id, "empty-description", 10.0, ""); },
+        "description is required"
+    );
+    assert_value_error(
+        lambda { record_student_expense(
             student_id, "bad-date", 10.0, "Invalid date", "today"
-        );
-    }
+        ); },
+        "ISO date format"
+    );
     assert get_student_finance(student_id).remaining_budget == 3500.0;
     remove_finance_test_student(student_id);
 
     no_budget_id = "phase4-no-budget-fixture";
     _ = create_finance_test_student(no_budget_id);
-    with testraises(ValueError, `match="Budget.*was not found") {
-        get_student_finance(no_budget_id);
-    }
+    assert_value_error(
+        lambda { get_student_finance(no_budget_id); }, "Budget.*was not found"
+    );
     remove_finance_test_student(no_budget_id);
 }
 

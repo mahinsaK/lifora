@@ -12,16 +12,17 @@ import from .state {
 }
 import from .tasks { update_student_task_progress }
 import from .finance { record_student_expense }
+import from test_support { assert_value_error }
 
 
 def remove_snapshot_test_student(student_id: str) {
     student = find_student(student_id);
     if student is not None {
-        for task in [student ->:HasAcademicTask:->] {
+        for task in [student->:HasAcademicTask:->] {
             del task;
         }
-        for budget in [student ->:HasBudget:->] {
-            for expense in [budget ->:HasExpense:->] {
+        for budget in [student->:HasBudget:->] {
+            for expense in [budget->:HasExpense:->] {
                 del expense;
             }
             del budget;
@@ -97,7 +98,8 @@ test "snapshot reflects task finance and time mutations" {
 
     snapshot = build_student_snapshot(student_id);
     ml_tasks = [
-        task for task in snapshot.academic_tasks
+        task
+        for task in snapshot.academic_tasks
         if task.id == "ml-assignment"
     ];
     assert len(ml_tasks) == 1;
@@ -116,19 +118,14 @@ test "snapshot reflects task finance and time mutations" {
 test "snapshot reports missing and incomplete state clearly" {
     missing_id = "phase5-missing-fixture";
     remove_snapshot_test_student(missing_id);
-    with testraises(ValueError, `match="Student.*was not found") {
-        build_student_snapshot(missing_id);
-    }
+    assert_value_error(
+        lambda { build_student_snapshot(missing_id); }, "Student.*was not found"
+    );
 
     incomplete_id = "phase5-incomplete-fixture";
-    _ = initialize_student(
-        incomplete_id,
-        "Incomplete Student",
-        "university",
-        5.0
+    _ = initialize_student(incomplete_id, "Incomplete Student", "university", 5.0);
+    assert_value_error(
+        lambda { build_student_snapshot(incomplete_id); }, "Budget.*was not found"
     );
-    with testraises(ValueError, `match="Budget.*was not found") {
-        build_student_snapshot(incomplete_id);
-    }
     remove_snapshot_test_student(incomplete_id);
 }

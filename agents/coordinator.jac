@@ -39,8 +39,9 @@ def coordinator_level_rank(level: str) -> int {
 }
 
 def coordinator_priority_score(result: AgentResult) -> int {
-    return coordinator_level_rank(result.risk_level) * 10
-        + coordinator_level_rank(result.urgency);
+    return coordinator_level_rank(result.risk_level) * 10 + coordinator_level_rank(
+        result.urgency
+    );
 }
 
 def rank_specialists(
@@ -49,8 +50,9 @@ def rank_specialists(
     ranked = [academic, finance, balance];
     for i in range(len(ranked)) {
         for j in range(i + 1, len(ranked)) {
-            if coordinator_priority_score(ranked[j])
-                > coordinator_priority_score(ranked[i]) {
+            if coordinator_priority_score(ranked[j]) > coordinator_priority_score(
+                ranked[i]
+            ) {
                 current = ranked[i];
                 ranked[i] = ranked[j];
                 ranked[j] = current;
@@ -102,8 +104,9 @@ def validate_coordinator_inputs(
     if (
         balance.risk_level != balance_facts.scheduling_pressure
         or balance.urgency != balance_facts.urgency
-        or abs(balance.required_time - balance_facts.maximum_realistic_focused_hours)
-            > 0.001
+        or abs(
+            balance.required_time - balance_facts.maximum_realistic_focused_hours
+        ) > 0.001
     ) {
         raise ValueError("balance result does not match available-time facts");
     }
@@ -121,8 +124,9 @@ def select_coordinator_task(
             continue;
         }
         if selected is None
-            or datetime.fromisoformat(task.deadline)
-                < datetime.fromisoformat(selected.deadline) {
+        or datetime.fromisoformat(task.deadline) < datetime.fromisoformat(
+            (selected as AcademicTask).deadline
+        ) {
             selected = task;
         }
     }
@@ -381,6 +385,6 @@ def run_coordinator(
         ConfigurationError,
         OutputConversionError,
         FinishToolError
-    ) {}
+    ) { }
     return build_coordinator_result(preparation, narrative);
 }

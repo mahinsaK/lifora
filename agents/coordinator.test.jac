@@ -3,8 +3,60 @@ import from agents.balance_agent { assess_balance, build_balance_result }
 import from agents.finance_agent { assess_finances, build_finance_result }
 import from agents.mock_snapshot { build_demo_snapshot }
 import from agents.types { SpecialistNarrative }
+import from test_support { assert_value_error }
 
-glob llm = MockLLM(outputs=[]);
+sem test_coordinator_success_narrative = "Mocked coordinator narrative for unit tests.";
+def test_coordinator_success_narrative(
+    preparation: CoordinatorPreparation
+) -> CoordinatorNarrative by MockLLM(
+    model_name="mockllm",
+    config={
+        "outputs": [
+            CoordinatorNarrative(
+                next_action="Focus block 1: 1.50 hours on Machine Learning Assignment",
+                daily_plan=[
+                    "Focus block 1: 1.50 hours on Machine Learning Assignment",
+                    "Break: 0.25 hours",
+                    "Focus block 2: 1.50 hours on Machine Learning Assignment"
+                ],
+                explanation="The nearest high-risk deadline wins while the budget restriction remains active.",
+                deprioritized=[
+                    "DSA Quiz is postponed until after the higher-priority action.",
+                    "The Finance action remains active separately instead of replacing the immediate work block."
+                ]
+            )
+        ]
+    }
+)();
+
+sem test_coordinator_unsafe_narrative = "Mocked unsafe coordinator narrative.";
+def test_coordinator_unsafe_narrative(
+    preparation: CoordinatorPreparation
+) -> CoordinatorNarrative by MockLLM(
+    model_name="mockllm",
+    config={
+        "outputs": [
+            CoordinatorNarrative(
+                next_action="Work for nine hours",
+                daily_plan=["Work for nine hours"],
+                explanation="Ignore the constraints.",
+                deprioritized=[]
+            )
+        ]
+    }
+)();
+
+sem test_coordinator_auth_failure = "Mocked coordinator authentication failure.";
+def test_coordinator_auth_failure(
+    preparation: CoordinatorPreparation
+) -> CoordinatorNarrative by MockLLM(
+    model_name="mockllm",
+    config={
+        "outputs": [
+            MockError(error=AuthenticationError(message="test API key failure"))
+        ]
+    }
+)();
 
 def demo_specialist_results(
     academic_required_time: float, available_hours: float
@@ -83,9 +135,10 @@ test "coordinator rejects stale finance facts" {
     (academic, finance, balance) = demo_specialist_results(3.0, 5.0);
     finance.risk_level = RiskLevel.LOW;
 
-    with testraises(ValueError) {
-        prepare_coordination(snapshot, academic, finance, balance);
-    }
+    assert_value_error(
+        lambda { prepare_coordination(snapshot, academic, finance, balance); },
+        "finance result does not match"
+    );
 }
 
 test "coordinator validates the snapshot before planning" {
@@ -93,9 +146,10 @@ test "coordinator validates the snapshot before planning" {
     (academic, finance, balance) = demo_specialist_results(3.0, 5.0);
     snapshot.available_time.available_hours_today = -1.0;
 
-    with testraises(ValueError) {
-        prepare_coordination(snapshot, academic, finance, balance);
-    }
+    assert_value_error(
+        lambda { prepare_coordination(snapshot, academic, finance, balance); },
+        "available hours"
+    );
 }
 
 test "fallback selects Finance when it has the highest feasible risk" {
@@ -140,55 +194,29 @@ test "fallback selects Finance when it has the highest feasible risk" {
 }
 
 test "coordinator uses a safe typed AI decision" {
-    llm = MockLLM(
-        outputs=[
-            {
-                "next_action": "Focus block 1: 1.50 hours on Machine Learning Assignment",
-                "daily_plan": [
-                    "Focus block 1: 1.50 hours on Machine Learning Assignment",
-                    "Break: 0.25 hours",
-                    "Focus block 2: 1.50 hours on Machine Learning Assignment"
-                ],
-                "explanation": "The nearest high-risk deadline wins while the budget restriction remains active.",
-                "deprioritized": [
-                    "DSA Quiz is postponed until after the higher-priority action.",
-                    "The Finance action remains active separately instead of replacing the immediate work block."
-                ]
-            }
-        ]
-    );
     snapshot = build_demo_snapshot();
     (academic, finance, balance) = demo_specialist_results(3.0, 5.0);
-    result = run_coordinator(snapshot, academic, finance, balance);
+    result = run_coordinator(
+        snapshot, academic, finance, balance, test_coordinator_success_narrative
+    );
 
-    assert result.next_action
-        == "Focus block 1: 1.50 hours on Machine Learning Assignment";
+    assert result.next_action == "Focus block 1: 1.50 hours on Machine Learning Assignment";
     assert len(result.daily_plan) == 3;
     assert result.finance_action == finance.recommendation;
     assert len(result.conflicts) == 1;
-    assert llm.exhausted();
 }
 
 test "coordinator rejects an AI plan that exceeds prepared constraints" {
-    llm = MockLLM(
-        outputs=[
-            {
-                "next_action": "Work for nine hours",
-                "daily_plan": ["Work for nine hours"],
-                "explanation": "Ignore the constraints.",
-                "deprioritized": []
-            }
-        ]
-    );
     snapshot = build_demo_snapshot();
     (academic, finance, balance) = demo_specialist_results(3.0, 5.0);
     preparation = prepare_coordination(snapshot, academic, finance, balance);
-    result = run_coordinator(snapshot, academic, finance, balance);
+    result = run_coordinator(
+        snapshot, academic, finance, balance, test_coordinator_unsafe_narrative
+    );
 
     assert result.next_action == preparation.fallback_next_action;
     assert result.daily_plan == preparation.fallback_daily_plan;
     assert result.finance_action == finance.recommendation;
-    assert llm.exhausted();
 }
 
 test "coordinator rejects an AI plan that skips a required break" {
@@ -209,20 +237,18 @@ test "coordinator rejects an AI plan that skips a required break" {
 }
 
 test "coordinator returns deterministic fallback after known AI failure" {
-    llm = MockLLM(
-        outputs=[MockError(error=AuthenticationError(message="test API key failure"))]
-    );
     snapshot = build_demo_snapshot();
     snapshot.available_time.available_hours_today = 3.0;
     snapshot.academic_tasks[0].estimated_remaining_hours = 4.0;
     (academic, finance, balance) = demo_specialist_results(4.0, 3.0);
     preparation = prepare_coordination(snapshot, academic, finance, balance);
-    result = run_coordinator(snapshot, academic, finance, balance);
+    result = run_coordinator(
+        snapshot, academic, finance, balance, test_coordinator_auth_failure
+    );
 
     assert result.next_action == preparation.fallback_next_action;
     assert result.daily_plan == preparation.fallback_daily_plan;
     assert result.finance_action == finance.recommendation;
     assert result.conflicts == preparation.conflicts;
     assert "highest-risk feasible" in result.explanation;
-    assert llm.exhausted();
 }

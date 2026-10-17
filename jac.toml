@@ -4,6 +4,7 @@ version = "0.0.1"
 description = "Empty Jac project - start from scratch"
 entry-point = "main"
 kind = "web-app"
+jac-version = "==0.34.24"
 
 [byllm]
 [byllm.model]

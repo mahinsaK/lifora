@@ -1,4 +1,5 @@
 import from agents.types { RiskLevel }
+import from test_support { assert_value_error }
 
 glob FIXED_NOW = "2026-10-17T18:00:00+05:30";
 
@@ -67,31 +68,35 @@ test "an elapsed deadline with unfinished work is critical" {
 }
 
 test "invalid progress is rejected" {
-    with testraises(ValueError) {
-        assess_deadline_risk(FIXED_NOW, "2026-10-18T18:00:00+05:30", -1.0, 2.0, 4.0, 3);
-    }
-    with testraises(ValueError) {
-        assess_deadline_risk(
+    assert_value_error(
+        lambda { assess_deadline_risk(
+            FIXED_NOW, "2026-10-18T18:00:00+05:30", -1.0, 2.0, 4.0, 3
+        ); }
+    );
+    assert_value_error(
+        lambda { assess_deadline_risk(
             FIXED_NOW, "2026-10-18T18:00:00+05:30", 101.0, 2.0, 4.0, 3
-        );
-    }
+        ); }
+    );
 }
 
 test "negative hour inputs are rejected" {
-    with testraises(ValueError) {
-        assess_deadline_risk(
+    assert_value_error(
+        lambda { assess_deadline_risk(
             FIXED_NOW, "2026-10-18T18:00:00+05:30", 50.0, -1.0, 4.0, 3
-        );
-    }
-    with testraises(ValueError) {
-        assess_deadline_risk(
+        ); }
+    );
+    assert_value_error(
+        lambda { assess_deadline_risk(
             FIXED_NOW, "2026-10-18T18:00:00+05:30", 50.0, 2.0, -1.0, 3
-        );
-    }
+        ); }
+    );
 }
 
 test "importance outside the supported scale is rejected" {
-    with testraises(ValueError) {
-        assess_deadline_risk(FIXED_NOW, "2026-10-18T18:00:00+05:30", 50.0, 2.0, 4.0, 0);
-    }
+    assert_value_error(
+        lambda { assess_deadline_risk(
+            FIXED_NOW, "2026-10-18T18:00:00+05:30", 50.0, 2.0, 4.0, 0
+        ); }
+    );
 }

@@ -7,12 +7,13 @@ import from .state {
     initialize_demo_academic_tasks,
     initialize_student
 }
+import from test_support { assert_value_error }
 
 
 def remove_task_test_student(student_id: str) {
     student = find_student(student_id);
     if student is not None {
-        for task in [student ->:HasAcademicTask:->] {
+        for task in [student->:HasAcademicTask:->] {
             del task;
         }
         del student;
@@ -51,11 +52,7 @@ test "academic task initialization is idempotent and preserves progress" {
         importance=5
     );
     assert first.created;
-    updated = update_student_task_progress(
-        student_id,
-        "test-assignment",
-        90.0
-    );
+    updated = update_student_task_progress(student_id, "test-assignment", 90.0);
     assert updated.progress == 90.0;
 
     second = initialize_academic_task(
@@ -114,12 +111,14 @@ test "task progress rejects values outside 0 to 100" {
         importance=3
     );
 
-    with testraises(ValueError, `match="between 0 and 100") {
-        update_student_task_progress(student_id, "test-task", -1.0);
-    }
-    with testraises(ValueError, `match="between 0 and 100") {
-        update_student_task_progress(student_id, "test-task", 101.0);
-    }
+    assert_value_error(
+        lambda { update_student_task_progress(student_id, "test-task", -1.0); },
+        "between 0 and 100"
+    );
+    assert_value_error(
+        lambda { update_student_task_progress(student_id, "test-task", 101.0); },
+        "between 0 and 100"
+    );
     assert find_academic_task(student, "test-task")?.progress == 40.0;
     remove_task_test_student(student_id);
 }
@@ -129,24 +128,30 @@ test "academic task creation validates required fields" {
     student_id = "phase3-fields-fixture";
     student = create_task_test_student(student_id);
 
-    with testraises(ValueError, `match="title is required") {
-        initialize_academic_task(
-            student, "empty-title", "", date.today().isoformat(),
-            0.0, 1.0, 3
-        );
-    }
-    with testraises(ValueError, `match="cannot be negative") {
-        initialize_academic_task(
-            student, "negative-hours", "Invalid Task",
-            date.today().isoformat(), 0.0, -1.0, 3
-        );
-    }
-    with testraises(ValueError, `match="ISO date format") {
-        initialize_academic_task(
-            student, "invalid-date", "Invalid Task", "tomorrow",
-            0.0, 1.0, 3
-        );
-    }
+    assert_value_error(
+        lambda { initialize_academic_task(
+            student, "empty-title", "", date.today().isoformat(), 0.0, 1.0, 3
+        ); },
+        "title is required"
+    );
+    assert_value_error(
+        lambda { initialize_academic_task(
+            student,
+            "negative-hours",
+            "Invalid Task",
+            date.today().isoformat(),
+            0.0,
+            -1.0,
+            3
+        ); },
+        "cannot be negative"
+    );
+    assert_value_error(
+        lambda { initialize_academic_task(
+            student, "invalid-date", "Invalid Task", "tomorrow", 0.0, 1.0, 3
+        ); },
+        "ISO date format"
+    );
     assert len(get_student_academic_tasks(student_id)) == 0;
     remove_task_test_student(student_id);
 }
@@ -155,9 +160,10 @@ test "academic task creation validates required fields" {
 test "task operations reject unknown identifiers" {
     student_id = "phase3-missing-fixture";
     _ = create_task_test_student(student_id);
-    with testraises(ValueError, `match="was not found") {
-        update_student_task_progress(student_id, "missing-task", 90.0);
-    }
+    assert_value_error(
+        lambda { update_student_task_progress(student_id, "missing-task", 90.0); },
+        "was not found"
+    );
     remove_task_test_student(student_id);
 }
 

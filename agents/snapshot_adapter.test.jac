@@ -1,4 +1,5 @@
 import from services.state { AcademicTaskView }
+import from test_support { assert_value_error }
 
 glob FIXED_ADAPTER_NOW = "2026-10-17T18:00:00+05:30";
 
@@ -9,14 +10,16 @@ test "timezone-aware deadline passes through unchanged" {
 }
 
 test "date-only deadline adapts to end of day in planning timezone" {
-    assert normalize_planning_deadline("2026-10-19", FIXED_ADAPTER_NOW)
-        == "2026-10-19T23:59:00+05:30";
+    assert normalize_planning_deadline("2026-10-19", FIXED_ADAPTER_NOW) == "2026-10-19T23:59:00+05:30";
 }
 
 test "naive datetime is rejected instead of guessing a timezone" {
-    with testraises(ValueError, `match="timezone-aware") {
-        normalize_planning_deadline("2026-10-19T23:59:00", FIXED_ADAPTER_NOW);
-    }
+    assert_value_error(
+        lambda { normalize_planning_deadline(
+            "2026-10-19T23:59:00", FIXED_ADAPTER_NOW
+        ); },
+        "timezone-aware"
+    );
 }
 
 test "task adaptation preserves service values without mutation" {

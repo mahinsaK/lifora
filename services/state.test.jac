@@ -1,3 +1,6 @@
+import from test_support { assert_value_error }
+
+
 def remove_test_student(student_id: str) {
     student = find_student(student_id);
     if student is not None {
@@ -35,7 +38,7 @@ test "student initialization is idempotent and preserves updates" {
 
     matches = [
         student
-        for student in [root -->[?:Student]]
+        for student in [root-->[?:Student]]
         if student.student_id == student_id
     ];
     assert len(matches) == 1;
@@ -53,12 +56,12 @@ test "available time rejects values outside one day" {
         available_hours_today=5.0
     );
 
-    with testraises(ValueError, `match="between 0 and 24") {
-        update_student_available_time(student_id, -1.0);
-    }
-    with testraises(ValueError, `match="between 0 and 24") {
-        update_student_available_time(student_id, 25.0);
-    }
+    assert_value_error(
+        lambda { update_student_available_time(student_id, -1.0); }, "between 0 and 24"
+    );
+    assert_value_error(
+        lambda { update_student_available_time(student_id, 25.0); }, "between 0 and 24"
+    );
     assert find_student(student_id)?.available_hours_today == 5.0;
     remove_test_student(student_id);
 }
@@ -67,7 +70,7 @@ test "available time rejects values outside one day" {
 test "available time update requires an existing student" {
     student_id = "phase1-missing-fixture";
     remove_test_student(student_id);
-    with testraises(ValueError, `match="was not found") {
-        update_student_available_time(student_id, 2.0);
-    }
+    assert_value_error(
+        lambda { update_student_available_time(student_id, 2.0); }, "was not found"
+    );
 }

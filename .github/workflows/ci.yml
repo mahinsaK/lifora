@@ -25,7 +25,7 @@ jobs:
 
       - name: Install Jac
         env:
-          JAC_VERSION: 0.37.25
+          JAC_VERSION: 0.34.24
         run: |
           curl --fail --silent --show-error --location \
             https://raw.githubusercontent.com/jaseci-labs/jaseci/main/scripts/install.sh \
@@ -36,7 +36,7 @@ jobs:
         run: jac --version
 
       - name: Install project dependencies
-        run: jac install --frozen
+        run: jac install
 
       - name: Type-check and lint Jac sources
         run: jac check
