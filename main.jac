@@ -6,7 +6,11 @@ import from services.state {
     initialize_demo_state,
     update_available_time
 }
-import from services.tasks { get_academic_tasks, update_task_progress }
+import from services.tasks {
+    add_academic_task,
+    get_academic_tasks,
+    update_task_progress
+}
 import ".styles.global.css";
 import from components.LiforaProvider { LiforaProvider }
 

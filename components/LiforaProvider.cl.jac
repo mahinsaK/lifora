@@ -8,7 +8,7 @@ import from react { createContext, useContext }
 import from "sonner" { toast }
 import from .display { PlanStep, parse_plan, level_of, fmt_clock, next_quarter_minutes }
 sv import from ..services.state { initialize_demo_state, update_available_time }
-sv import from ..services.tasks { update_task_progress }
+sv import from ..services.tasks { add_academic_task, update_task_progress }
 sv import from ..services.finance { add_expense }
 sv import from ..services.snapshot { StudentSnapshot, get_student_snapshot }
 sv import from ..services.planning { plan_student }
@@ -141,6 +141,34 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         }
     }
 
+    async def save_task(
+        title: str,
+        deadline: str,
+        progress: float,
+        estimated_remaining_hours: float,
+        importance: int
+    ) -> None {
+        saving = True;
+        task_id = "task-" + str(Date.now());  # jac:ignore[W2001]
+        try {
+            await add_academic_task(
+                task_id,
+                title,
+                deadline,
+                progress,
+                estimated_remaining_hours,
+                importance
+            );
+            changedTaskId = task_id;
+            previousProgress = progress;
+            saving = False;
+            await after_change("Task added");
+        } except Exception as err {
+            saving = False;
+            toast.error("Couldn't add the task", {"description": error_text(err)});
+        }
+    }
+
     async def save_expense(amount: float, description: str) -> None {
         saving = True;
         before = snapshot.finance.remaining_budget if snapshot else -1.0;
@@ -207,6 +235,7 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         "runPlan": run_plan,
         "clearPlanError": lambda { planError = ""; },
         "saveProgress": save_progress,
+        "saveTask": save_task,
         "saveExpense": save_expense,
         "saveTime": save_time,
         "setDialog": set_dialog

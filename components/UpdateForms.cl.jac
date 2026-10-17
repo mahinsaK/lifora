@@ -1,4 +1,4 @@
-"""State update forms (progress / expense / available time).
+"""State update forms for academic, finance and availability changes.
 
 Each form works inline (Update page) and inside a dialog (quick edits from any
 page). Saving is delegated to the shared provider through `onSave`.
@@ -172,6 +172,60 @@ def:pub ProgressForm(
 }
 
 
+def:pub AddTaskForm(
+    saving: bool,
+    onSave: Callable[[str, str, float, float, int], None],
+    onCancel: Callable[[], None] | None = None
+) -> JsxElement {
+    has title: str = "",
+        deadline: str = "",
+        progressText: str = "0",
+        hoursText: str = "",
+        importance: int = 3;
+
+    progressValue = float(progressText) if progressText else 0.0;
+    hoursValue = float(hoursText) if hoursText else 0.0;
+    progress = 0.0 if progressValue != progressValue else progressValue;
+    hours = 0.0 if hoursValue != hoursValue else hoursValue;
+    valid = bool(title.strip()) and bool(deadline) and progress >= 0 and progress <= 100 and hours >= 0 and bool(hoursText);
+
+    def save {
+        onSave(title.strip(), deadline, progress, hours, importance);
+    }
+
+    return <div className="flex flex-col gap-4">
+        <Field>
+            <FieldLabel htmlFor="task-title">Task title</FieldLabel>
+            <Input id="task-title" placeholder="Database Systems Exam" value={title} onChange={lambda (e: ChangeEvent) { title = e.target.value; }} />
+        </Field>
+        <Field>
+            <FieldLabel htmlFor="task-deadline">Deadline</FieldLabel>
+            <Input id="task-deadline" type="date" value={deadline} onChange={lambda (e: ChangeEvent) { deadline = e.target.value; }} />
+        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+            <Field>
+                <FieldLabel htmlFor="task-progress">Current progress (%)</FieldLabel>
+                <Input id="task-progress" type="number" min="0" max="100" value={progressText} onChange={lambda (e: ChangeEvent) { progressText = e.target.value; }} />
+            </Field>
+            <Field>
+                <FieldLabel htmlFor="task-hours">Hours remaining</FieldLabel>
+                <Input id="task-hours" type="number" min="0" step="0.5" placeholder="3" value={hoursText} onChange={lambda (e: ChangeEvent) { hoursText = e.target.value; }} />
+            </Field>
+        </div>
+        <Field>
+            <FieldLabel>Importance</FieldLabel>
+            <div className="flex flex-wrap gap-2">
+                {for level in [1, 2, 3, 4, 5] {
+                    <Chip label={str(level)} active={importance == level} onPick={lambda { importance = level; }} />
+                }}
+            </div>
+            <FieldDescription>1 is low priority; 5 is essential.</FieldDescription>
+        </Field>
+        <FormActions label="Create task" saving={saving} disabled={not valid} onSave={save} onCancel={onCancel} />
+    </div>;
+}
+
+
 def:pub ExpenseForm(
     remaining: float,
     saving: bool,
@@ -315,6 +369,7 @@ def:pub UpdateDialog(
     hours: float,
     saving: bool,
     onClose: Callable[[], None],
+    onSaveTask: Callable[[str, str, float, float, int], None],
     onSaveProgress: Callable[[str, float], None],
     onSaveExpense: Callable[[float, str], None],
     onSaveTime: Callable[[float], None]
@@ -322,7 +377,11 @@ def:pub UpdateDialog(
     title = "Update assignment progress";
     description = "Lifora uses this the next time it plans.";
     icon: any = ChartIncreaseIcon;
-    if kind == "expense" {
+    if kind == "task" {
+        title = "Add academic task";
+        description = "Add a deadline so Lifora can prioritize it.";
+        icon = PlusSignIcon;
+    } elif kind == "expense" {
         title = "Add expense";
         description = "Logged to today's spending.";
         icon = Wallet01Icon;
@@ -350,6 +409,7 @@ def:pub UpdateDialog(
                 </div>
             </DialogHeader>
             {kind == "progress" and <ProgressForm tasks={tasks} saving={saving} onSave={onSaveProgress} onCancel={onClose} />}
+            {kind == "task" and <AddTaskForm saving={saving} onSave={onSaveTask} onCancel={onClose} />}
             {kind == "expense" and <ExpenseForm remaining={remaining} saving={saving} onSave={onSaveExpense} onCancel={onClose} />}
             {kind == "time" and <TimeForm hours={hours} saving={saving} onSave={onSaveTime} onCancel={onClose} />}
         </DialogContent>

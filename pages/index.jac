@@ -7,6 +7,8 @@ import from ..components.BalanceCard { BalanceCard }
 import from ..components.ResultStates { EmptyResult, ThinkingResult, ErrorBanner }
 import from ..components.PageParts { NextActionSummary }
 import from ..components.LiforaProvider { useLifora }
+import from "@hugeicons/react" { HugeiconsIcon }
+import from "@hugeicons/core-free-icons" { PlusSignIcon }
 
 
 """/ - who the student is, their current state, and the main Lifora action."""
@@ -96,6 +98,21 @@ def:pub OverviewPage -> JsxPage {
                 </div>
             }}
         </section>
+
+        {snapshot and <section aria-labelledby="quick-actions" className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h2 id="quick-actions" className="font-semibold">Quick Actions</h2>
+                <p className="text-sm text-muted-foreground">Keep your situation current before Lifora plans.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+                <Button onClick={lambda (e: MouseEvent) { set_dialog.call(None, "task"); }} className="gap-2">
+                    <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} className="size-4" />
+                    Add Task
+                </Button>
+                <Button variant="outline" onClick={lambda (e: MouseEvent) { set_dialog.call(None, "expense"); }}>Add Expense</Button>
+                <Button variant="outline" onClick={lambda (e: MouseEvent) { set_dialog.call(None, "time"); }}>Update Available Time</Button>
+            </div>
+        </section>}
 
         {if not plan and not planning and snapshot {
             <EmptyResult onRun={app["runPlan"]} disabled={False} />

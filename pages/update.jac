@@ -6,10 +6,11 @@ import from "@hugeicons/core-free-icons" {
     HourglassIcon,
     ArrowRight01Icon,
     InformationCircleIcon
+    ,PlusSignIcon
 }
 import from ..components.ui.skeleton { Skeleton }
 import from ..components.ui.spinner { Spinner }
-import from ..components.UpdateForms { ProgressForm, ExpenseForm, TimeForm, FormHeading }
+import from ..components.UpdateForms { AddTaskForm, ProgressForm, ExpenseForm, TimeForm, FormHeading }
 import from ..components.PageParts { PageHeader }
 import from ..components.LiforaProvider { useLifora }
 
@@ -58,7 +59,11 @@ def:pub UpdatePage -> JsxPage {
             skip;
         }}
 
-        <div className="grid items-start gap-4 lg:grid-cols-3">
+        <div className="grid items-start gap-4 lg:grid-cols-2">
+            <section className="flex flex-col gap-5 rounded-xl border bg-card p-5 shadow-sm">
+                <FormHeading icon={PlusSignIcon} title="Add task" description="Create coursework with a deadline and effort estimate." />
+                <AddTaskForm saving={saving} onSave={app["saveTask"]} />
+            </section>
             <section className="flex flex-col gap-5 rounded-xl border bg-card p-5 shadow-sm">
                 <FormHeading icon={ChartIncreaseIcon} title="Assignment progress" description="How far along are you?" />
                 <ProgressForm tasks={snapshot.academic_tasks} saving={saving} onSave={app["saveProgress"]} />

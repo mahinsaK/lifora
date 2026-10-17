@@ -29,6 +29,7 @@ def:pub Shell -> JsxLayout {
             hours={snapshot.available_time.available_hours_today}
             saving={app["saving"]}
             onClose={lambda { set_dialog.call(None, ""); }}
+            onSaveTask={app["saveTask"]}
             onSaveProgress={app["saveProgress"]}
             onSaveExpense={app["saveExpense"]}
             onSaveTime={app["saveTime"]}
