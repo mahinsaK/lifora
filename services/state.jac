@@ -101,6 +101,12 @@ obj TransactionView {
 }
 
 
+obj GoalView {
+    has id: str;
+    has title: str;
+}
+
+
 obj BudgetInitializationResult {
     has budget: Budget;
     has created: bool;
@@ -195,10 +201,21 @@ node Income {
 }
 
 
+node Goal {
+    has goal_id: str;
+    has title: str;
+
+    def to_view -> GoalView {
+        return GoalView(id=self.goal_id, title=self.title);
+    }
+}
+
+
 edge HasAcademicTask: Student --> AcademicTask {}
 edge HasBudget: Student --> Budget {}
 edge HasExpense: Budget --> Expense {}
 edge HasIncome: Budget --> Income {}
+edge HasGoal: Student --> Goal {}
 
 
 def validate_available_hours(available_hours_today: float) {
@@ -355,6 +372,16 @@ def find_income(budget: Budget, income_id: str) -> Income | None {
     for income in [budget ->:HasIncome:->] {
         if income.income_id == income_id {
             return income;
+        }
+    }
+    return None;
+}
+
+
+def find_goal(student: Student, goal_id: str) -> Goal | None {
+    for goal in [student ->:HasGoal:->] {
+        if goal.goal_id == goal_id {
+            return goal;
         }
     }
     return None;

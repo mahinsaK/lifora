@@ -10,7 +10,7 @@ import from "@hugeicons/core-free-icons" {
 }
 import from ..components.ui.skeleton { Skeleton }
 import from ..components.ui.spinner { Spinner }
-import from ..components.UpdateForms { AddTaskForm, EditTaskForm, IncomeForm, ProgressForm, ExpenseForm, TimeForm, TransactionHistory, FormHeading }
+import from ..components.UpdateForms { AddTaskForm, EditTaskForm, IncomeForm, ProgressForm, ExpenseForm, TimeForm, TransactionHistory, ProfileGoalsForm, FormHeading }
 import from ..components.PageParts { PageHeader }
 import from ..components.LiforaProvider { useLifora }
 
@@ -85,6 +85,15 @@ def:pub UpdatePage -> JsxPage {
                 <TimeForm hours={snapshot.available_time.available_hours_today} saving={saving} onSave={app["saveTime"]} />
             </section>
             <TransactionHistory transactions={app["transactions"]} />
+            <ProfileGoalsForm
+                name={snapshot.profile.name}
+                lifeStage={snapshot.profile.life_stage}
+                goals={app["goals"]}
+                saving={saving}
+                onSaveProfile={app["saveProfile"]}
+                onAddGoal={app["saveGoal"]}
+                onRemoveGoal={app["deleteGoal"]}
+            />
         </div>
     </div>;
 }

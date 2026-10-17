@@ -10,6 +10,7 @@ import from services.state {
 }
 import from services.tasks { get_student_academic_tasks }
 import from services.finance { get_student_finance }
+import from services.student_management { get_student_goals }
 
 
 obj StudentSnapshot {
@@ -32,7 +33,7 @@ def build_student_snapshot(student_id: str) -> StudentSnapshot {
         academic_tasks=get_student_academic_tasks(student_id),
         finance=get_student_finance(student_id),
         available_time=student_state.available_time,
-        goals=[]
+        goals=[goal.title for goal in get_student_goals(student_id)]
     );
 }
 

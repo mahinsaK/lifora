@@ -22,7 +22,7 @@ import from .ui.input { Input }
 import from .ui.input_group { InputGroup, InputGroupAddon, InputGroupText, InputGroupInput }
 import from .ui.spinner { Spinner }
 import from .display { fmt_money, fmt_hours, deadline_label }
-sv import from ..services.state { AcademicTaskView, TransactionView }
+sv import from ..services.state { AcademicTaskView, GoalView, TransactionView }
 
 
 """Toggle chip used for quick picks."""
@@ -431,6 +431,42 @@ def:pub TransactionHistory(transactions: list[TransactionView]) -> JsxElement {
                 }}
             </ul>
         }}
+    </section>;
+}
+
+
+def:pub ProfileGoalsForm(
+    name: str,
+    lifeStage: str,
+    goals: list[GoalView],
+    saving: bool,
+    onSaveProfile: Callable[[str, str], None],
+    onAddGoal: Callable[[str], None],
+    onRemoveGoal: Callable[[str], None]
+) -> JsxElement {
+    has nameText: str = "",
+        stageText: str = "",
+        goalText: str = "";
+    can with [name, lifeStage] entry {
+        nameText = name;
+        stageText = lifeStage;
+    }
+    return <section className="flex flex-col gap-5 rounded-xl border bg-card p-5 shadow-sm lg:col-span-2">
+        <FormHeading icon={InformationCircleIcon} title="Profile and goals" description="Keep the context used in your plans up to date." />
+        <div className="grid gap-4 sm:grid-cols-2">
+            <Field><FieldLabel htmlFor="profile-name">Name</FieldLabel><Input id="profile-name" value={nameText} onChange={lambda (e: ChangeEvent) { nameText = e.target.value; }} /></Field>
+            <Field><FieldLabel htmlFor="profile-stage">Life stage</FieldLabel><Input id="profile-stage" value={stageText} onChange={lambda (e: ChangeEvent) { stageText = e.target.value; }} /></Field>
+        </div>
+        <div className="flex justify-end"><Button disabled={saving or not nameText.strip() or not stageText.strip() or (nameText == name and stageText == lifeStage)} onClick={lambda (e: MouseEvent) { onSaveProfile(nameText.strip(), stageText.strip()); }}>Save profile</Button></div>
+        <div className="flex flex-col gap-3 border-t pt-4">
+            <Field><FieldLabel htmlFor="new-goal">New goal</FieldLabel><div className="flex gap-2"><Input id="new-goal" placeholder="Finish the semester strongly" value={goalText} onChange={lambda (e: ChangeEvent) { goalText = e.target.value; }} /><Button disabled={saving or not goalText.strip()} onClick={lambda (e: MouseEvent) { onAddGoal(goalText.strip()); goalText = ""; }}>Add goal</Button></div></Field>
+            <ul className="flex flex-col gap-2">
+                {for goal in goals {
+                    <li key={goal.id} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2"><span className="text-sm font-medium">{goal.title}</span><Button variant="ghost" size="sm" disabled={saving} onClick={lambda (e: MouseEvent) { onRemoveGoal(goal.id); }}>Remove</Button></li>
+                }}
+                {if len(goals) == 0 { <li className="rounded-lg border border-dashed px-3 py-4 text-center text-sm text-muted-foreground">No goals yet.</li> }}
+            </ul>
+        </div>
     </section>;
 }
 

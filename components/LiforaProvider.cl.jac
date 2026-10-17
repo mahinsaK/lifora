@@ -11,6 +11,8 @@ sv import from ..services.state { initialize_demo_state, update_available_time }
 sv import from ..services.tasks { add_academic_task, complete_academic_task, update_academic_task, update_task_progress }
 sv import from ..services.finance { add_expense, add_income, get_transactions }
 sv import from ..services.state { TransactionView }
+sv import from ..services.state { GoalView }
+sv import from ..services.student_management { add_goal, get_goals, remove_goal, update_profile }
 sv import from ..services.snapshot { StudentSnapshot, get_student_snapshot }
 sv import from ..services.planning { plan_student }
 sv import from ..agents.types { PlanningResponse }
@@ -60,7 +62,8 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         previousHours: float = -1.0,
         dialog: str = "",
         saving: bool = False,
-        transactions: list[TransactionView] = [];
+        transactions: list[TransactionView] = [],
+        goals: list[GoalView] = [];
 
     async can with entry {
         await load_state();
@@ -73,6 +76,7 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
             await initialize_demo_state();
             snapshot = await get_student_snapshot();
             transactions = await get_transactions();
+            goals = await get_goals();
         } except Exception as err {
             bootError = "We couldn't load your student data.";
         }
@@ -115,6 +119,7 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         fresh = await get_student_snapshot();
         snapshot = fresh;
         transactions = await get_transactions();
+        goals = await get_goals();
         dialog = "";
         toast.success(message, {"description": "Replanning with your new situation…" if plan else "Ask Lifora when you're ready."});
         if plan {
@@ -252,6 +257,42 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         }
     }
 
+    async def save_profile(name: str, life_stage: str) -> None {
+        saving = True;
+        try {
+            await update_profile(name, life_stage);
+            saving = False;
+            await after_change("Profile updated");
+        } except Exception as err {
+            saving = False;
+            toast.error("Couldn't update the profile", {"description": error_text(err)});
+        }
+    }
+
+    async def save_goal(title: str) -> None {
+        saving = True;
+        try {
+            await add_goal("goal-" + str(Date.now()), title);  # jac:ignore[W2001]
+            saving = False;
+            await after_change("Goal added");
+        } except Exception as err {
+            saving = False;
+            toast.error("Couldn't add the goal", {"description": error_text(err)});
+        }
+    }
+
+    async def delete_goal(goal_id: str) -> None {
+        saving = True;
+        try {
+            await remove_goal(goal_id);
+            saving = False;
+            await after_change("Goal removed");
+        } except Exception as err {
+            saving = False;
+            toast.error("Couldn't remove the goal", {"description": error_text(err)});
+        }
+    }
+
     def set_dialog(name: str) {
         if name or not saving {
             dialog = name;
@@ -286,6 +327,7 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         "dialog": dialog,
         "saving": saving,
         "transactions": transactions,
+        "goals": goals,
         "reload": load_state,
         "runPlan": run_plan,
         "clearPlanError": lambda { planError = ""; },
@@ -296,6 +338,9 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         "saveExpense": save_expense,
         "saveIncome": save_income,
         "saveTime": save_time,
+        "saveProfile": save_profile,
+        "saveGoal": save_goal,
+        "deleteGoal": delete_goal,
         "setDialog": set_dialog
     };
 

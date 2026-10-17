@@ -7,6 +7,12 @@ import from services.finance {
 import from services.planning { plan_student }
 import from services.snapshot { get_student_snapshot }
 import from services.simulation { simulate_plan }
+import from services.student_management {
+    add_goal,
+    get_goals,
+    remove_goal,
+    update_profile
+}
 import from services.state {
     get_student_state,
     initialize_demo_state,
