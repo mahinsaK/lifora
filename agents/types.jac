@@ -80,3 +80,12 @@ obj AcademicAssessment {
         required_time: float,
         candidate_next_action: str;
 }
+
+obj FinanceAssessment {
+    has total_spent: float,
+        remaining_budget: float,
+        recommended_daily_allowance: float,
+        budget_pressure: RiskLevel,
+        urgency: UrgencyLevel,
+        candidate_next_action: str;
+}
