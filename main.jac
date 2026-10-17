@@ -13,6 +13,7 @@ import from services.student_management {
     remove_goal,
     update_profile
 }
+import from services.task_estimation { estimate_task_hours }
 import from services.state {
     get_student_state,
     initialize_demo_state,

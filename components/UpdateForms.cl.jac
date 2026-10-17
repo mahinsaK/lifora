@@ -23,6 +23,7 @@ import from .ui.input_group { InputGroup, InputGroupAddon, InputGroupText, Input
 import from .ui.spinner { Spinner }
 import from .display { fmt_money, fmt_hours, deadline_label }
 sv import from ..services.state { AcademicTaskView, GoalView, TransactionView }
+sv import from ..services.task_estimation { estimate_task_hours }
 
 
 """Toggle chip used for quick picks."""
@@ -181,7 +182,10 @@ def:pub AddTaskForm(
         deadline: str = "",
         progressText: str = "0",
         hoursText: str = "",
-        importance: int = 3;
+        importance: int = 3,
+        estimating: bool = False,
+        estimateReason: str = "",
+        estimateConfidence: str = "";
 
     progressValue = float(progressText) if progressText else 0.0;
     hoursValue = float(hoursText) if hoursText else 0.0;
@@ -193,30 +197,63 @@ def:pub AddTaskForm(
         onSave(title.strip(), deadline, progress, hours, importance);
     }
 
+    async def refresh_estimate(
+        nextTitle: str,
+        nextDeadline: str,
+        nextProgressText: str,
+        nextImportance: int
+    ) {
+        if not nextTitle.strip() or not nextDeadline {
+            return;
+        }
+        parsedProgress = float(nextProgressText) if nextProgressText else 0.0;
+        if parsedProgress != parsedProgress or parsedProgress < 0 or parsedProgress > 100 {
+            return;
+        }
+        estimating = True;
+        try {
+            estimate = await estimate_task_hours(
+                nextTitle.strip(),
+                nextDeadline,
+                parsedProgress,
+                nextImportance
+            );
+            hoursText = str(estimate.estimated_remaining_hours);
+            estimateReason = estimate.reason;
+            estimateConfidence = estimate.confidence;
+        } except Exception {
+            estimateReason = "";
+            estimateConfidence = "";
+        }
+        estimating = False;
+    }
+
     return <div className="flex flex-col gap-4">
         <Field>
             <FieldLabel htmlFor="task-title">Task title</FieldLabel>
-            <Input id="task-title" placeholder="Database Systems Exam" value={title} onChange={lambda (e: ChangeEvent) { title = e.target.value; }} />
+            <Input id="task-title" placeholder="Database Systems Exam" value={title} onChange={lambda (e: ChangeEvent) { title = e.target.value; }} onBlur={lambda (e: FocusEvent) { refresh_estimate(title, deadline, progressText, importance); }} />
         </Field>
         <Field>
             <FieldLabel htmlFor="task-deadline">Deadline</FieldLabel>
-            <Input id="task-deadline" type="date" value={deadline} onChange={lambda (e: ChangeEvent) { deadline = e.target.value; }} />
+            <Input id="task-deadline" type="date" value={deadline} onChange={lambda (e: ChangeEvent) { deadline = e.target.value; refresh_estimate(title, e.target.value, progressText, importance); }} />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
             <Field>
                 <FieldLabel htmlFor="task-progress">Current progress (%)</FieldLabel>
-                <Input id="task-progress" type="number" min="0" max="100" value={progressText} onChange={lambda (e: ChangeEvent) { progressText = e.target.value; }} />
+                <Input id="task-progress" type="number" min="0" max="100" value={progressText} onChange={lambda (e: ChangeEvent) { progressText = e.target.value; }} onBlur={lambda (e: FocusEvent) { refresh_estimate(title, deadline, progressText, importance); }} />
             </Field>
             <Field>
                 <FieldLabel htmlFor="task-hours">Hours remaining</FieldLabel>
                 <Input id="task-hours" type="number" min="0" step="0.5" placeholder="3" value={hoursText} onChange={lambda (e: ChangeEvent) { hoursText = e.target.value; }} />
+                <FieldDescription>{"Estimating from your task details…" if estimating else "Suggested automatically; you can adjust it."}</FieldDescription>
             </Field>
         </div>
+        {estimateReason and <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 text-sm"><HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} className="mt-0.5 size-4 shrink-0 text-primary" /><p><span className="font-semibold text-primary">{"Lifora estimate · " + estimateConfidence + " confidence. "}</span><span className="text-muted-foreground">{estimateReason}</span></p></div>}
         <Field>
             <FieldLabel>Importance</FieldLabel>
             <div className="flex flex-wrap gap-2">
                 {for level in [1, 2, 3, 4, 5] {
-                    <span key={str(level)}><Chip label={str(level)} active={importance == level} onPick={lambda { importance = level; }} /></span>
+                    <span key={str(level)}><Chip label={str(level)} active={importance == level} onPick={lambda { importance = level; refresh_estimate(title, deadline, progressText, level); }} /></span>
                 }}
             </div>
             <FieldDescription>1 is low priority; 5 is essential.</FieldDescription>
