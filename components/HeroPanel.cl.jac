@@ -32,9 +32,9 @@ def:pub HeroPanel(
     onRun: Callable[[], None]
 ) -> JsxElement {
     first_name = name.split(" ")[0] if name else "there";
-    label = "What Should I Do Next?";
+    label = "Plan My Day";
     if hasResult {
-        label = "Replan with your changes" if stale else "Re-run Lifora";
+        label = "Update My Plan" if stale else "Re-run Plan";
     }
 
     caption = <span className="inline-flex items-center gap-1.5">
@@ -67,9 +67,9 @@ def:pub HeroPanel(
             <div className="flex max-w-2xl flex-col gap-2">
                 <p className="text-sm font-medium text-primary">{greeting() + ", " + first_name}</p>
                 <h1 className="text-balance text-2xl font-semibold leading-tight tracking-tight sm:text-3xl lg:text-4xl">
-                    One life. Many priorities. One intelligent next step.
+                    Know what to do next—without ignoring the rest of your life.
                 </h1>
-                <p className="text-sm text-muted-foreground sm:text-base">Understand today. Simulate tomorrow. Decide better.</p>
+                <p className="text-sm text-muted-foreground sm:text-base">Lifora balances deadlines, money, and available time into one clear plan.</p>
             </div>
             <div className="flex flex-col gap-2 lg:items-end">
                 <Button

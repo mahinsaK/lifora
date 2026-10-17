@@ -33,9 +33,7 @@ def:pub TracePage -> JsxPage {
 
         {if not plan {
             <NoPlanYet what="Decision Trace" planning={planning} disabled={app["booting"] or not app["snapshot"]} onRun={app["runPlan"]} />
-            skip;
-        }}
-
+        } else {
         <div className={"mx-auto w-full max-w-4xl transition-opacity " + ("pointer-events-none opacity-60" if planning else "")}>
             <DecisionTrace
                 academic={plan.academic}
@@ -45,5 +43,6 @@ def:pub TracePage -> JsxPage {
                 previous={app["previous"]}
             />
         </div>
+        }}
     </div>;
 }

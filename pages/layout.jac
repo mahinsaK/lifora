@@ -22,17 +22,23 @@ def:pub Shell -> JsxLayout {
         <footer className="border-t py-6 text-center text-sm text-muted-foreground">
             A calmer way to make progress through university.
         </footer>
-        {snapshot and <UpdateDialog
+        {if snapshot {
+        <UpdateDialog
             kind={app["dialog"]}
             tasks={snapshot.academic_tasks}
             remaining={snapshot.finance.remaining_budget}
             hours={snapshot.available_time.available_hours_today}
             saving={app["saving"]}
             onClose={lambda { set_dialog.call(None, ""); }}
+            onSaveTask={app["saveTask"]}
+            onSaveTaskDetails={app["saveTaskDetails"]}
+            onCompleteTask={app["completeTask"]}
+            onSaveIncome={app["saveIncome"]}
             onSaveProgress={app["saveProgress"]}
             onSaveExpense={app["saveExpense"]}
             onSaveTime={app["saveTime"]}
-        />}
+        />
+        }}
         <Toaster position="bottom-right" richColors={True} />
     </div>;
 }

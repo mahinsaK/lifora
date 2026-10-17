@@ -6,13 +6,19 @@ import from services.state {
     DEMO_STUDENT_ID,
     ExpenseRecordResult,
     FinanceView,
+    HasIncome,
+    Income,
+    IncomeRecordResult,
+    TransactionView,
     HasExpense,
     find_budget,
     find_expense,
+    find_income,
     find_student,
     initialize_expense,
     normalize_expense_date,
     validate_expense_values
+    ,validate_income_values
 }
 
 
@@ -43,6 +49,42 @@ def get_student_finance(student_id: str) -> FinanceView {
         raise ValueError(f"Budget for student '{student_id}' was not found.");
     }
     return build_finance_view(budget);
+}
+
+
+def get_student_transactions(student_id: str) -> list[TransactionView] {
+    student = find_student(student_id);
+    if student is None {
+        raise ValueError(f"Student '{student_id}' was not found.");
+    }
+    budget = find_budget(student);
+    if budget is None {
+        raise ValueError(f"Budget for student '{student_id}' was not found.");
+    }
+    transactions: list[TransactionView] = [];
+    for expense in [budget ->:HasExpense:->] {
+        transactions.append(TransactionView(
+            id=expense.expense_id,
+            kind="EXPENSE",
+            amount=expense.amount,
+            description=expense.description,
+            occurred_on=expense.spent_on
+        ));
+    }
+    for income in [budget ->:HasIncome:->] {
+        transactions.append(TransactionView(
+            id=income.income_id,
+            kind="INCOME",
+            amount=income.amount,
+            description=income.description,
+            occurred_on=income.received_on
+        ));
+    }
+    return sorted(
+        transactions,
+        key=lambda (item: TransactionView) { item.occurred_on + item.id; },
+        reverse=True
+    );
 }
 
 
@@ -86,8 +128,53 @@ def record_student_expense(
 }
 
 
+def record_student_income(
+    student_id: str,
+    transaction_id: str,
+    amount: float,
+    description: str,
+    received_on: str = ""
+) -> IncomeRecordResult {
+    validate_income_values(transaction_id, amount, description);
+    income_date = (
+        date.today().isoformat()
+        if not received_on.strip()
+        else normalize_expense_date(received_on)
+    );
+    student = find_student(student_id);
+    if student is None {
+        raise ValueError(f"Student '{student_id}' was not found.");
+    }
+    budget = find_budget(student);
+    if budget is None {
+        raise ValueError(f"Budget for student '{student_id}' was not found.");
+    }
+    if find_income(budget, transaction_id) is not None {
+        raise ValueError(f"Income '{transaction_id}' already exists.");
+    }
+
+    income = budget +>:HasIncome():+> Income(
+        income_id=transaction_id,
+        amount=amount,
+        description=description.strip(),
+        received_on=income_date
+    );
+    budget.weekly_budget += amount;
+    budget.remaining_budget += amount;
+    return IncomeRecordResult(
+        income=income.to_view(),
+        finance=build_finance_view(budget)
+    );
+}
+
+
 def:pub get_finance -> FinanceView {
     return get_student_finance(DEMO_STUDENT_ID);
+}
+
+
+def:pub get_transactions -> list[TransactionView] {
+    return get_student_transactions(DEMO_STUDENT_ID);
 }
 
 
@@ -103,5 +190,21 @@ def:pub add_expense(
         amount=amount,
         description=description,
         spent_on=spent_on
+    );
+}
+
+
+def:pub add_income(
+    transaction_id: str,
+    amount: float,
+    description: str,
+    received_on: str = ""
+) -> IncomeRecordResult {
+    return record_student_income(
+        student_id=DEMO_STUDENT_ID,
+        transaction_id=transaction_id,
+        amount=amount,
+        description=description,
+        received_on=received_on
     );
 }

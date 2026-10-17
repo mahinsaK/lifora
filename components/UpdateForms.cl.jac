@@ -1,4 +1,4 @@
-"""State update forms (progress / expense / available time).
+"""State update forms for academic, finance and availability changes.
 
 Each form works inline (Update page) and inside a dialog (quick edits from any
 page). Saving is delegated to the shared provider through `onSave`.
@@ -22,7 +22,8 @@ import from .ui.input { Input }
 import from .ui.input_group { InputGroup, InputGroupAddon, InputGroupText, InputGroupInput }
 import from .ui.spinner { Spinner }
 import from .display { fmt_money, fmt_hours, deadline_label }
-sv import from ..services.state { AcademicTaskView }
+sv import from ..services.state { AcademicTaskView, GoalView, TransactionView }
+sv import from ..services.task_estimation { estimate_task_hours }
 
 
 """Toggle chip used for quick picks."""
@@ -172,6 +173,217 @@ def:pub ProgressForm(
 }
 
 
+def:pub AddTaskForm(
+    saving: bool,
+    onSave: Callable[[str, str, float, float, int], None],
+    onCancel: Callable[[], None] | None = None
+) -> JsxElement {
+    has title: str = "",
+        deadline: str = "",
+        progressText: str = "0",
+        hoursText: str = "",
+        importance: int = 3,
+        estimating: bool = False,
+        estimateReason: str = "",
+        estimateConfidence: str = "",
+        hoursManuallyEdited: bool = False,
+        estimateTimerRef: Ref[any] = Ref(None),
+        estimateRequestRef: Ref[int] = Ref(0);
+
+    progressValue = float(progressText) if progressText else 0.0;
+    hoursValue = float(hoursText) if hoursText else 0.0;
+    progress = 0.0 if progressValue != progressValue else progressValue;
+    hours = 0.0 if hoursValue != hoursValue else hoursValue;
+    valid = bool(title.strip()) and bool(deadline) and progress >= 0 and progress <= 100 and hours >= 0 and bool(hoursText);
+
+    def save {
+        onSave(title.strip(), deadline, progress, hours, importance);
+    }
+
+    async def refresh_estimate(
+        nextTitle: str,
+        nextDeadline: str,
+        nextProgressText: str,
+        nextImportance: int,
+        requestId: int
+    ) {
+        parsedProgress = float(nextProgressText) if nextProgressText else 0.0;
+        try {
+            estimate = await estimate_task_hours(
+                nextTitle.strip(),
+                nextDeadline,
+                parsedProgress,
+                nextImportance
+            );
+            if estimateRequestRef.current != requestId {
+                return;
+            }
+            hoursText = str(estimate.estimated_remaining_hours);
+            estimateReason = estimate.reason;
+            estimateConfidence = estimate.confidence;
+        } except Exception {
+            if estimateRequestRef.current == requestId {
+                estimateReason = "";
+                estimateConfidence = "";
+            }
+        }
+        if estimateRequestRef.current == requestId {
+            estimating = False;
+        }
+    }
+
+    def schedule_estimate(
+        nextTitle: str,
+        nextDeadline: str,
+        nextProgressText: str,
+        nextImportance: int
+    ) {
+        if estimateTimerRef.current {
+            clearTimeout(estimateTimerRef.current);
+        }
+        nextRequestId = (estimateRequestRef.current or 0) + 1;
+        estimateRequestRef.current = nextRequestId;
+        parsedProgress = float(nextProgressText) if nextProgressText else 0.0;
+        if not nextTitle.strip() or not nextDeadline or parsedProgress != parsedProgress or parsedProgress < 0 or parsedProgress > 100 {
+            estimating = False;
+            estimateReason = "";
+            estimateConfidence = "";
+            return;
+        }
+        estimating = True;
+        hoursManuallyEdited = False;
+        estimateTimerRef.current = setTimeout(
+            lambda {
+                refresh_estimate(
+                    nextTitle,
+                    nextDeadline,
+                    nextProgressText,
+                    nextImportance,
+                    nextRequestId
+                );
+            },
+            250
+        );
+    }
+
+    def handle_hours_change(e: ChangeEvent) {
+        if estimateTimerRef.current {
+            clearTimeout(estimateTimerRef.current);
+        }
+        estimateRequestRef.current = (estimateRequestRef.current or 0) + 1;
+        estimating = False;
+        hoursManuallyEdited = True;
+        estimateReason = "";
+        estimateConfidence = "";
+        hoursText = e.target.value;
+    }
+
+    def pick_importance(level: int) {
+        importance = level;
+        schedule_estimate(title, deadline, progressText, level);
+    }
+
+    return <div className="flex flex-col gap-4">
+        <Field>
+            <FieldLabel htmlFor="task-title">Task title</FieldLabel>
+            <Input id="task-title" placeholder="Database Systems Exam" value={title} onChange={lambda (e: ChangeEvent) { title = e.target.value; schedule_estimate(e.target.value, deadline, progressText, importance); }} />
+        </Field>
+        <Field>
+            <FieldLabel htmlFor="task-deadline">Deadline</FieldLabel>
+            <Input id="task-deadline" type="date" value={deadline} onChange={lambda (e: ChangeEvent) { deadline = e.target.value; schedule_estimate(title, e.target.value, progressText, importance); }} />
+        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+            <Field>
+                <FieldLabel htmlFor="task-progress">Current progress (%)</FieldLabel>
+                <Input id="task-progress" type="number" min="0" max="100" value={progressText} onChange={lambda (e: ChangeEvent) { progressText = e.target.value; schedule_estimate(title, deadline, e.target.value, importance); }} />
+            </Field>
+            <Field>
+                <FieldLabel htmlFor="task-hours">Hours remaining</FieldLabel>
+                <Input id="task-hours" type="number" min="0" step="0.5" placeholder="3" value={hoursText} onChange={handle_hours_change} />
+                <FieldDescription>{"Estimating from your task details…" if estimating else ("Manual value; change task details to recalculate." if hoursManuallyEdited else "Suggested automatically; you can adjust it.")}</FieldDescription>
+            </Field>
+        </div>
+        {estimateReason and <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 text-sm"><HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} className="mt-0.5 size-4 shrink-0 text-primary" /><p><span className="font-semibold text-primary">{"Lifora estimate · " + estimateConfidence + " confidence. "}</span><span className="text-muted-foreground">{estimateReason}</span></p></div>}
+        <Field>
+            <FieldLabel>Importance</FieldLabel>
+            <div className="flex flex-wrap gap-2">
+                {for level in [1, 2, 3, 4, 5] {
+                    <span key={str(level)}><Chip label={str(level)} active={importance == level} onPick={lambda { pick_importance(level); }} /></span>
+                }}
+            </div>
+            <FieldDescription>1 is low priority; 5 is essential.</FieldDescription>
+        </Field>
+        <FormActions label="Create task" saving={saving} disabled={not valid} onSave={save} onCancel={onCancel} />
+    </div>;
+}
+
+
+def:pub EditTaskForm(
+    tasks: list[AcademicTaskView],
+    saving: bool,
+    onSave: Callable[[str, str, str, float, float, int], None],
+    onComplete: Callable[[str], None],
+    onCancel: Callable[[], None] | None = None
+) -> JsxElement {
+    has taskId: str = "",
+        title: str = "",
+        deadline: str = "",
+        progress: float = 0.0,
+        hoursText: str = "",
+        importance: int = 3;
+
+    can with [tasks] entry {
+        selected = [t for t in tasks if t.id == taskId];
+        task = selected[0] if len(selected) > 0 else (tasks[0] if len(tasks) > 0 else None);
+        if task {
+            taskId = task.id;
+            title = task.title;
+            deadline = task.deadline;
+            progress = task.progress;
+            hoursText = str(task.estimated_remaining_hours);
+            importance = task.importance;
+        }
+    }
+
+    def pick_task(task: AcademicTaskView) {
+        taskId = task.id;
+        title = task.title;
+        deadline = task.deadline;
+        progress = task.progress;
+        hoursText = str(task.estimated_remaining_hours);
+        importance = task.importance;
+    }
+    parsedHours = float(hoursText) if hoursText else -1.0;
+    hours = -1.0 if parsedHours != parsedHours else parsedHours;
+    valid = bool(taskId) and bool(title.strip()) and bool(deadline) and hours >= 0;
+
+    return <div className="flex flex-col gap-4">
+        <Field>
+            <FieldLabel>Task</FieldLabel>
+            <div className="flex flex-wrap gap-2">
+                {for task in tasks {
+                    <button key={task.id} type="button" onClick={lambda (e: MouseEvent) { pick_task(task); }} className={"rounded-lg border px-3 py-2 text-sm font-medium " + ("border-primary bg-primary/5" if task.id == taskId else "hover:bg-muted")}>{task.title}</button>
+                }}
+            </div>
+        </Field>
+        <Field><FieldLabel htmlFor="edit-task-title">Title</FieldLabel><Input id="edit-task-title" value={title} onChange={lambda (e: ChangeEvent) { title = e.target.value; }} /></Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+            <Field><FieldLabel htmlFor="edit-task-deadline">Deadline</FieldLabel><Input id="edit-task-deadline" type="date" value={deadline} onChange={lambda (e: ChangeEvent) { deadline = e.target.value; }} /></Field>
+            <Field><FieldLabel htmlFor="edit-task-hours">Hours remaining</FieldLabel><Input id="edit-task-hours" type="number" min="0" step="0.5" value={hoursText} onChange={lambda (e: ChangeEvent) { hoursText = e.target.value; }} /></Field>
+        </div>
+        <Field>
+            <FieldLabel>Importance</FieldLabel>
+            <div className="flex flex-wrap gap-2">{for level in [1, 2, 3, 4, 5] { <span key={str(level)}><Chip label={str(level)} active={importance == level} onPick={lambda { importance = level; }} /></span> }}</div>
+        </Field>
+        <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
+            {onCancel and <Button variant="ghost" onClick={lambda (e: MouseEvent) { onCancel(); }}>Cancel</Button>}
+            <Button variant="outline" disabled={saving or not taskId or progress >= 100} onClick={lambda (e: MouseEvent) { onComplete(taskId); }}>Mark completed</Button>
+            <Button disabled={saving or not valid} onClick={lambda (e: MouseEvent) { onSave(taskId, title.strip(), deadline, progress, hours, importance); }}>Save details</Button>
+        </div>
+    </div>;
+}
+
+
 def:pub ExpenseForm(
     remaining: float,
     saving: bool,
@@ -254,6 +466,103 @@ def:pub ExpenseForm(
 }
 
 
+def:pub IncomeForm(
+    saving: bool,
+    onSave: Callable[[float, str, str], None],
+    onCancel: Callable[[], None] | None = None
+) -> JsxElement {
+    has amountText: str = "",
+        description: str = "",
+        receivedOn: str = "";
+    parsed = float(amountText) if amountText else 0.0;
+    amount = 0.0 if parsed != parsed else parsed;
+    valid = amount > 0 and bool(description.strip()) and bool(receivedOn);
+
+    def save {
+        onSave(amount, description.strip(), receivedOn);
+    }
+
+    return <div className="flex flex-col gap-4">
+        <Field>
+            <FieldLabel htmlFor="income-amount">Amount</FieldLabel>
+            <InputGroup className="h-11">
+                <InputGroupAddon><InputGroupText>Rs.</InputGroupText></InputGroupAddon>
+                <InputGroupInput id="income-amount" type="number" min="0" inputMode="decimal" placeholder="5000" value={amountText} onChange={lambda (e: ChangeEvent) { amountText = e.target.value; }} />
+            </InputGroup>
+        </Field>
+        <Field>
+            <FieldLabel htmlFor="income-description">Description</FieldLabel>
+            <Input id="income-description" placeholder="Allowance or part-time work" value={description} onChange={lambda (e: ChangeEvent) { description = e.target.value; }} />
+        </Field>
+        <Field>
+            <FieldLabel htmlFor="income-date">Date received</FieldLabel>
+            <Input id="income-date" type="date" value={receivedOn} onChange={lambda (e: ChangeEvent) { receivedOn = e.target.value; }} />
+        </Field>
+        <FormActions label="Add income" saving={saving} disabled={not valid} onSave={save} onCancel={onCancel} />
+    </div>;
+}
+
+
+def:pub TransactionHistory(transactions: list[TransactionView]) -> JsxElement {
+    return <section className="flex flex-col gap-4 rounded-xl border bg-card p-5 shadow-sm lg:col-span-2">
+        <FormHeading icon={Wallet01Icon} title="Transaction history" description="Income and expenses recorded in your graph." />
+        {if len(transactions) == 0 {
+            <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">No transactions recorded yet.</p>
+        } else {
+            <ul className="divide-y rounded-lg border">
+                {for transaction in transactions {
+                    <li key={transaction.kind + transaction.id} className="flex items-center justify-between gap-4 px-4 py-3">
+                        <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{transaction.description}</p>
+                            <p className="text-xs text-muted-foreground">{transaction.occurred_on + " · " + transaction.kind.lower()}</p>
+                        </div>
+                        <span className={"shrink-0 font-semibold tabular-nums " + ("text-primary" if transaction.kind == "INCOME" else "text-risk-high")}>
+                            {("+" if transaction.kind == "INCOME" else "−") + fmt_money(transaction.amount)}
+                        </span>
+                    </li>
+                }}
+            </ul>
+        }}
+    </section>;
+}
+
+
+def:pub ProfileGoalsForm(
+    name: str,
+    lifeStage: str,
+    goals: list[GoalView],
+    saving: bool,
+    onSaveProfile: Callable[[str, str], None],
+    onAddGoal: Callable[[str], None],
+    onRemoveGoal: Callable[[str], None]
+) -> JsxElement {
+    has nameText: str = "",
+        stageText: str = "",
+        goalText: str = "";
+    can with [name, lifeStage] entry {
+        nameText = name;
+        stageText = lifeStage;
+    }
+    return <section className="flex flex-col gap-5 rounded-xl border bg-card p-5 shadow-sm lg:col-span-2">
+        <FormHeading icon={InformationCircleIcon} title="Profile and goals" description="Keep the context used in your plans up to date." />
+        <div className="grid gap-4 sm:grid-cols-2">
+            <Field><FieldLabel htmlFor="profile-name">Name</FieldLabel><Input id="profile-name" value={nameText} onChange={lambda (e: ChangeEvent) { nameText = e.target.value; }} /></Field>
+            <Field><FieldLabel htmlFor="profile-stage">Life stage</FieldLabel><Input id="profile-stage" value={stageText} onChange={lambda (e: ChangeEvent) { stageText = e.target.value; }} /></Field>
+        </div>
+        <div className="flex justify-end"><Button disabled={saving or not nameText.strip() or not stageText.strip() or (nameText == name and stageText == lifeStage)} onClick={lambda (e: MouseEvent) { onSaveProfile(nameText.strip(), stageText.strip()); }}>Save profile</Button></div>
+        <div className="flex flex-col gap-3 border-t pt-4">
+            <Field><FieldLabel htmlFor="new-goal">New goal</FieldLabel><div className="flex gap-2"><Input id="new-goal" placeholder="Finish the semester strongly" value={goalText} onChange={lambda (e: ChangeEvent) { goalText = e.target.value; }} /><Button disabled={saving or not goalText.strip()} onClick={lambda (e: MouseEvent) { onAddGoal(goalText.strip()); goalText = ""; }}>Add goal</Button></div></Field>
+            <ul className="flex flex-col gap-2">
+                {for goal in goals {
+                    <li key={goal.id} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2"><span className="text-sm font-medium">{goal.title}</span><Button variant="ghost" size="sm" disabled={saving} onClick={lambda (e: MouseEvent) { onRemoveGoal(goal.id); }}>Remove</Button></li>
+                }}
+                {if len(goals) == 0 { <li className="rounded-lg border border-dashed px-3 py-4 text-center text-sm text-muted-foreground">No goals yet.</li> }}
+            </ul>
+        </div>
+    </section>;
+}
+
+
 def:pub TimeForm(
     hours: float,
     saving: bool,
@@ -315,6 +624,10 @@ def:pub UpdateDialog(
     hours: float,
     saving: bool,
     onClose: Callable[[], None],
+    onSaveTask: Callable[[str, str, float, float, int], None],
+    onSaveTaskDetails: Callable[[str, str, str, float, float, int], None],
+    onCompleteTask: Callable[[str], None],
+    onSaveIncome: Callable[[float, str, str], None],
     onSaveProgress: Callable[[str, float], None],
     onSaveExpense: Callable[[float, str], None],
     onSaveTime: Callable[[float], None]
@@ -322,7 +635,19 @@ def:pub UpdateDialog(
     title = "Update assignment progress";
     description = "Lifora uses this the next time it plans.";
     icon: any = ChartIncreaseIcon;
-    if kind == "expense" {
+    if kind == "task" {
+        title = "Add academic task";
+        description = "Add a deadline so Lifora can prioritize it.";
+        icon = PlusSignIcon;
+    } elif kind == "edit-task" {
+        title = "Edit academic task";
+        description = "Change task details or mark it complete.";
+        icon = ChartIncreaseIcon;
+    } elif kind == "income" {
+        title = "Add income";
+        description = "Add funds to this week's available budget.";
+        icon = Wallet01Icon;
+    } elif kind == "expense" {
         title = "Add expense";
         description = "Logged to today's spending.";
         icon = Wallet01Icon;
@@ -350,6 +675,9 @@ def:pub UpdateDialog(
                 </div>
             </DialogHeader>
             {kind == "progress" and <ProgressForm tasks={tasks} saving={saving} onSave={onSaveProgress} onCancel={onClose} />}
+            {kind == "task" and <AddTaskForm saving={saving} onSave={onSaveTask} onCancel={onClose} />}
+            {kind == "edit-task" and <EditTaskForm tasks={tasks} saving={saving} onSave={onSaveTaskDetails} onComplete={onCompleteTask} onCancel={onClose} />}
+            {kind == "income" and <IncomeForm saving={saving} onSave={onSaveIncome} onCancel={onClose} />}
             {kind == "expense" and <ExpenseForm remaining={remaining} saving={saving} onSave={onSaveExpense} onCancel={onClose} />}
             {kind == "time" and <TimeForm hours={hours} saving={saving} onSave={onSaveTime} onCancel={onClose} />}
         </DialogContent>

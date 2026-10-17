@@ -78,6 +78,35 @@ obj ExpenseRecordResult {
 }
 
 
+obj IncomeView {
+    has id: str;
+    has amount: float;
+    has description: str;
+    has received_on: str;
+}
+
+
+obj IncomeRecordResult {
+    has income: IncomeView;
+    has finance: FinanceView;
+}
+
+
+obj TransactionView {
+    has id: str;
+    has kind: str;
+    has amount: float;
+    has description: str;
+    has occurred_on: str;
+}
+
+
+obj GoalView {
+    has id: str;
+    has title: str;
+}
+
+
 obj BudgetInitializationResult {
     has budget: Budget;
     has created: bool;
@@ -155,9 +184,38 @@ node Expense {
 }
 
 
+node Income {
+    has income_id: str;
+    has amount: float;
+    has description: str;
+    has received_on: str;
+
+    def to_view -> IncomeView {
+        return IncomeView(
+            id=self.income_id,
+            amount=self.amount,
+            description=self.description,
+            received_on=self.received_on
+        );
+    }
+}
+
+
+node Goal {
+    has goal_id: str;
+    has title: str;
+
+    def to_view -> GoalView {
+        return GoalView(id=self.goal_id, title=self.title);
+    }
+}
+
+
 edge HasAcademicTask: Student --> AcademicTask {}
 edge HasBudget: Student --> Budget {}
 edge HasExpense: Budget --> Expense {}
+edge HasIncome: Budget --> Income {}
+edge HasGoal: Student --> Goal {}
 
 
 def validate_available_hours(available_hours_today: float) {
@@ -171,6 +229,32 @@ def validate_task_progress(progress: float) {
     if progress < 0.0 or progress > 100.0 {
         raise ValueError("Task progress must be between 0 and 100.");
     }
+}
+
+
+def validate_academic_task_values(
+    task_id: str,
+    title: str,
+    deadline: str,
+    progress: float,
+    estimated_remaining_hours: float,
+    importance: int
+) -> str {
+    if not task_id.strip() {
+        raise ValueError("Task ID is required.");
+    }
+    if not title.strip() {
+        raise ValueError("Task title is required.");
+    }
+    normalized_deadline = normalize_deadline(deadline);
+    validate_task_progress(progress);
+    if estimated_remaining_hours < 0.0 {
+        raise ValueError("Estimated remaining hours cannot be negative.");
+    }
+    if importance < 1 or importance > 5 {
+        raise ValueError("Task importance must be between 1 and 5.");
+    }
+    return normalized_deadline;
 }
 
 
@@ -219,6 +303,23 @@ def validate_expense_values(
 }
 
 
+def validate_income_values(
+    income_id: str,
+    amount: float,
+    description: str
+) {
+    if not income_id.strip() {
+        raise ValueError("Income ID is required.");
+    }
+    if amount <= 0.0 {
+        raise ValueError("Income amount must be greater than zero.");
+    }
+    if not description.strip() {
+        raise ValueError("Income description is required.");
+    }
+}
+
+
 def normalize_expense_date(spent_on: str) -> str {
     try {
         return date.fromisoformat(spent_on).isoformat();
@@ -261,6 +362,26 @@ def find_expense(budget: Budget, expense_id: str) -> Expense | None {
     for expense in [budget ->:HasExpense:->] {
         if expense.expense_id == expense_id {
             return expense;
+        }
+    }
+    return None;
+}
+
+
+def find_income(budget: Budget, income_id: str) -> Income | None {
+    for income in [budget ->:HasIncome:->] {
+        if income.income_id == income_id {
+            return income;
+        }
+    }
+    return None;
+}
+
+
+def find_goal(student: Student, goal_id: str) -> Goal | None {
+    for goal in [student ->:HasGoal:->] {
+        if goal.goal_id == goal_id {
+            return goal;
         }
     }
     return None;
@@ -314,20 +435,9 @@ def initialize_academic_task(
     estimated_remaining_hours: float,
     importance: int
 ) -> TaskInitializationResult {
-    if not task_id.strip() {
-        raise ValueError("Task ID is required.");
-    }
-    if not title.strip() {
-        raise ValueError("Task title is required.");
-    }
-    normalized_deadline = normalize_deadline(deadline);
-    validate_task_progress(progress);
-    if estimated_remaining_hours < 0.0 {
-        raise ValueError("Estimated remaining hours cannot be negative.");
-    }
-    if importance < 1 or importance > 5 {
-        raise ValueError("Task importance must be between 1 and 5.");
-    }
+    normalized_deadline = validate_academic_task_values(
+        task_id, title, deadline, progress, estimated_remaining_hours, importance
+    );
 
     existing = find_academic_task(student, task_id);
     if existing is not None {

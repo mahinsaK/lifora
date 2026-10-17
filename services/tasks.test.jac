@@ -168,6 +168,71 @@ test "task operations reject unknown identifiers" {
 }
 
 
+test "student can add a validated academic task exactly once" {
+    student_id = "phase-add-task-fixture";
+    _ = create_task_test_student(student_id);
+    deadline = (date.today() + timedelta(days=3)).isoformat();
+
+    created = add_student_academic_task(
+        student_id,
+        "database-exam",
+        "Database Systems Exam",
+        deadline,
+        15.0,
+        6.5,
+        4
+    );
+    assert created.id == "database-exam";
+    assert created.title == "Database Systems Exam";
+    assert created.deadline == deadline;
+    assert created.progress == 15.0;
+    assert created.estimated_remaining_hours == 6.5;
+    assert created.importance == 4;
+    assert len(get_student_academic_tasks(student_id)) == 1;
+
+    assert_value_error(
+        lambda { add_student_academic_task(
+            student_id, "database-exam", "Duplicate", deadline, 0.0, 1.0, 1
+        ); },
+        "already exists"
+    );
+    assert len(get_student_academic_tasks(student_id)) == 1;
+    remove_task_test_student(student_id);
+}
+
+
+test "task details update atomically and task can be completed" {
+    student_id = "phase-edit-task-fixture";
+    student = create_task_test_student(student_id);
+    original_deadline = date.today().isoformat();
+    _ = initialize_academic_task(
+        student, "edit-me", "Original", original_deadline, 25.0, 4.0, 2
+    );
+    new_deadline = (date.today() + timedelta(days=5)).isoformat();
+    updated = update_student_academic_task(
+        student_id, "edit-me", "Updated title", new_deadline, 50.0, 2.5, 5
+    );
+    assert updated.title == "Updated title";
+    assert updated.deadline == new_deadline;
+    assert updated.progress == 50.0;
+    assert updated.estimated_remaining_hours == 2.5;
+    assert updated.importance == 5;
+
+    assert_value_error(
+        lambda { update_student_academic_task(
+            student_id, "edit-me", "", new_deadline, 80.0, 1.0, 3
+        ); },
+        "title is required"
+    );
+    preserved = find_academic_task(student, "edit-me");
+    assert preserved?.title == "Updated title";
+    assert preserved?.progress == 50.0;
+    completed = update_student_task_progress(student_id, "edit-me", 100.0);
+    assert completed.progress == 100.0;
+    remove_task_test_student(student_id);
+}
+
+
 test "demo academic seed creates the required tasks once" {
     student_id = "phase3-demo-seed-fixture";
     student = create_task_test_student(student_id);

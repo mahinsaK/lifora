@@ -24,6 +24,9 @@ def remove_finance_test_student(student_id: str) {
             for expense in [budget->:HasExpense:->] {
                 del expense;
             }
+            for income in [budget->:HasIncome:->] {
+                del income;
+            }
             del budget;
         }
         del student;
@@ -157,5 +160,65 @@ test "available time updates from five to two hours" {
     updated = update_student_available_time(student_id, 2.0);
     assert updated.available_time.available_hours_today == 2.0;
     assert find_student(student_id)?.available_hours_today == 2.0;
+    remove_finance_test_student(student_id);
+}
+
+
+test "income increases available funds without changing recorded spending" {
+    student_id = "phase-income-fixture";
+    student = create_finance_test_student(student_id);
+    initialize_demo_finance(student);
+
+    result = record_student_income(
+        student_id, "allowance-1", 2000.0, "Monthly allowance", date.today().isoformat()
+    );
+    assert result.income.id == "allowance-1";
+    assert result.income.amount == 2000.0;
+    assert result.finance.weekly_budget == 9000.0;
+    assert result.finance.remaining_budget == 5500.0;
+    assert result.finance.spent_today == 1500.0;
+
+    assert_value_error(
+        lambda { record_student_income(student_id, "allowance-1", 2000.0, "Again"); },
+        "already exists"
+    );
+    assert get_student_finance(student_id).remaining_budget == 5500.0;
+    remove_finance_test_student(student_id);
+}
+
+
+test "income validates amount description and date" {
+    student_id = "phase-income-validation-fixture";
+    student = create_finance_test_student(student_id);
+    _ = initialize_budget(student, 7000.0, 3500.0, 4);
+    assert_value_error(
+        lambda { record_student_income(student_id, "bad-amount", 0.0, "Allowance"); },
+        "greater than zero"
+    );
+    assert_value_error(
+        lambda { record_student_income(student_id, "bad-description", 10.0, ""); },
+        "description is required"
+    );
+    assert_value_error(
+        lambda { record_student_income(student_id, "bad-date", 10.0, "Allowance", "today"); },
+        "ISO date format"
+    );
+    remove_finance_test_student(student_id);
+}
+
+
+test "transaction history combines income and expenses newest first" {
+    student_id = "phase-history-fixture";
+    student = create_finance_test_student(student_id);
+    _ = initialize_budget(student, 7000.0, 7000.0, 4);
+    _ = record_student_expense(student_id, "older-expense", 500.0, "Bus", "2026-10-15");
+    _ = record_student_income(student_id, "newer-income", 1000.0, "Allowance", "2026-10-16");
+
+    history = get_student_transactions(student_id);
+    assert len(history) == 2;
+    assert history[0].id == "newer-income";
+    assert history[0].kind == "INCOME";
+    assert history[1].id == "older-expense";
+    assert history[1].kind == "EXPENSE";
     remove_finance_test_student(student_id);
 }
