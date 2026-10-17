@@ -39,4 +39,4 @@ jobs:
         run: jac install
 
       - name: Type-check and lint Jac sources
-        run: jac check
+        run: jac check . -n
