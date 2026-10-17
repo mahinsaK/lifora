@@ -8,8 +8,9 @@ import from services.state {
 }
 import from services.tasks { get_academic_tasks, update_task_progress }
 import ".styles.global.css";
-import from components.LiforaDashboard { LiforaDashboard }
+import from components.LiforaProvider { LiforaProvider }
 
-def:pub app -> JsxElement {
-    return <LiforaDashboard/>;
+# File-based routing: pages/ builds the router and passes it in as `children`.
+def:pub app(children: any) -> JsxElement {
+    return <LiforaProvider>{children}</LiforaProvider>;
 }
