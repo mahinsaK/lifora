@@ -11,7 +11,7 @@ sv import from ..services.state { initialize_demo_state, update_available_time }
 sv import from ..services.tasks { update_task_progress }
 sv import from ..services.finance { add_expense }
 sv import from ..services.snapshot { StudentSnapshot, get_student_snapshot }
-sv import from ..services.planning { plan_student }
+sv import from ..services.planning { WhatIfResponse, plan_student, simulate_plan }
 sv import from ..agents.types { PlanningResponse }
 
 
@@ -58,7 +58,12 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         previousRemaining: float = -1.0,
         previousHours: float = -1.0,
         dialog: str = "",
-        saving: bool = False;
+        saving: bool = False,
+        whatIfScenario: str = "",
+        whatIfRunning: bool = False,
+        whatIfFailed: bool = False,
+        simulatedPlan: PlanningResponse | None = None,
+        simulatedSnapshot: StudentSnapshot | None = None;
 
     async can with entry {
         await load_state();
@@ -95,6 +100,7 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
             planStart = next_quarter_minutes();
             lastRun = now_label();
             stale = False;
+            reset_what_if();
         } except Exception as err {
             planError = "Lifora's reasoning is unavailable right now.";
         }
@@ -112,7 +118,14 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         fresh = await get_student_snapshot();
         snapshot = fresh;
         dialog = "";
-        toast.success(message, {"description": "Replanning with your new situation…" if plan else "Ask Lifora when you're ready."});
+        toast.success(
+            message,
+            {
+                "description": "Replanning with your new situation…"
+                    if plan
+                    else "Ask Lifora when you're ready."
+            }
+        );
         if plan {
             stale = True;
             await plan_for(fresh);
@@ -134,7 +147,9 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
             changedTaskId = task_id;
             previousProgress = before;
             saving = False;
-            await after_change("Progress updated to " + str(int(round(progress))) + "%");
+            await after_change(
+                "Progress updated to " + str(int(round(progress))) + "%"
+            );
         } except Exception as err {
             saving = False;
             toast.error("Couldn't update progress", {"description": error_text(err)});
@@ -176,6 +191,30 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         }
     }
 
+    def reset_what_if -> None {
+        whatIfScenario = "";
+        whatIfRunning = False;
+        whatIfFailed = False;
+        simulatedPlan = None;
+        simulatedSnapshot = None;
+    }
+
+    async def run_what_if(scenario: str) -> None {
+        whatIfScenario = scenario;
+        whatIfRunning = True;
+        whatIfFailed = False;
+        simulatedPlan = None;
+        simulatedSnapshot = None;
+        try {
+            result: WhatIfResponse = await simulate_plan(scenario);
+            simulatedPlan = result.planning;
+            simulatedSnapshot = result.snapshot;
+        } except Exception as err {
+            whatIfFailed = True;
+        }
+        whatIfRunning = False;
+    }
+
     steps: list[PlanStep] = parse_plan(plan.coordinator.daily_plan) if plan else [];
     focus_hours = 0.0;
     for step in steps {
@@ -203,13 +242,20 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         "previousHours": previousHours,
         "dialog": dialog,
         "saving": saving,
+        "whatIfScenario": whatIfScenario,
+        "whatIfRunning": whatIfRunning,
+        "whatIfFailed": whatIfFailed,
+        "simulatedPlan": simulatedPlan,
+        "simulatedSnapshot": simulatedSnapshot,
         "reload": load_state,
         "runPlan": run_plan,
         "clearPlanError": lambda { planError = ""; },
         "saveProgress": save_progress,
         "saveExpense": save_expense,
         "saveTime": save_time,
-        "setDialog": set_dialog
+        "setDialog": set_dialog,
+        "runWhatIf": run_what_if,
+        "resetWhatIf": reset_what_if
     };
 
     return <LiforaContext.Provider value={value}>{children}</LiforaContext.Provider>;

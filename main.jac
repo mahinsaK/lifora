@@ -1,5 +1,5 @@
 import from services.finance { add_expense, get_finance }
-import from services.planning { plan_student }
+import from services.planning { WhatIfResponse, plan_student, simulate_plan }
 import from services.snapshot { get_student_snapshot }
 import from services.state {
     get_student_state,
