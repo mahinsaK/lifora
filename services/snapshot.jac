@@ -1,6 +1,6 @@
 """Stable StudentSnapshot composition for Lifora consumers."""
 
-import from .state {
+import from services.state {
     AcademicTaskView,
     AvailableTimeView,
     DEMO_STUDENT_ID,
@@ -8,8 +8,8 @@ import from .state {
     ProfileView,
     find_student
 }
-import from .tasks { get_student_academic_tasks }
-import from .finance { get_student_finance }
+import from services.tasks { get_student_academic_tasks }
+import from services.finance { get_student_finance }
 
 
 obj StudentSnapshot {

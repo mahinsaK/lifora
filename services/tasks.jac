@@ -1,6 +1,6 @@
 """Academic task operations backed by Lifora's persistent student graph."""
 
-import from .state {
+import from services.state {
     AcademicTaskView,
     DEMO_STUDENT_ID,
     HasAcademicTask,

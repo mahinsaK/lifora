@@ -10,6 +10,7 @@ import from jaclang.byllm.lib {
 import from agents.balance_agent { assess_balance }
 import from agents.deadline_risk { validate_deadline_inputs }
 import from agents.finance_agent { assess_finances }
+import from agents.llm_support { openai_narratives_configured }
 import from services.snapshot { StudentSnapshot }
 import from services.state { AcademicTaskView as AcademicTask }
 import from agents.types {
@@ -323,7 +324,14 @@ def coordinator_narrative_is_safe(
     );
 }
 
-sem generate_coordinator_narrative = """
+obj CoordinatorNarrativeDraft {
+    has next_action: str,
+        daily_plan: list[str],
+        explanation: str,
+        deprioritized: list[str];
+}
+
+sem request_coordinator_narrative = """
 Resolve only soft conflicts in the supplied deterministic preparation. Select
 one exact candidate action, create a practical plan using only the provided
 work blocks in their existing order, explain why the action won, and select
@@ -332,9 +340,27 @@ change calculated urgency, risk, available-time limits, budget facts, work
 block durations, conflicts, or the separate Finance action.
 """;
 
+def request_coordinator_narrative(
+    preparation: CoordinatorPreparation
+) -> CoordinatorNarrativeDraft by llm(temperature=0.0, max_output_retries=1);
+
 def generate_coordinator_narrative(
     preparation: CoordinatorPreparation
-) -> CoordinatorNarrative by llm(temperature=0.0, max_output_retries=1);
+) -> CoordinatorNarrative {
+    if not openai_narratives_configured() {
+        return fallback_coordinator_narrative(preparation);
+    }
+    draft = request_coordinator_narrative(preparation);
+    if draft is None {
+        return fallback_coordinator_narrative(preparation);
+    }
+    return CoordinatorNarrative(
+        next_action=draft.next_action,
+        daily_plan=draft.daily_plan,
+        explanation=draft.explanation,
+        deprioritized=draft.deprioritized
+    );
+}
 
 def fallback_coordinator_narrative(
     preparation: CoordinatorPreparation

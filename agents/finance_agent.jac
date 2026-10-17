@@ -7,6 +7,7 @@ import from jaclang.byllm.lib {
     RateLimitError
 }
 import from services.state { FinanceView as FinanceSnapshot }
+import from agents.llm_support { openai_narratives_configured }
 import from agents.types {
     AgentResult,
     Domain,
@@ -120,7 +121,13 @@ def assess_finances(finance: FinanceSnapshot) -> FinanceAssessment {
     );
 }
 
-sem generate_finance_narrative = """
+obj FinanceNarrativeDraft {
+    has summary: str,
+        recommendation: str,
+        explanation: str;
+}
+
+sem request_finance_narrative = """
 Write a concise finance summary, recommendation, and evidence-based explanation.
 Use only the supplied deterministic assessment. Preserve total spent, remaining
 budget, daily allowance, budget pressure, urgency, and candidate next action.
@@ -128,9 +135,24 @@ Do not recalculate values and do not provide investment, trading, gambling,
 credit, or loan advice.
 """;
 
-def generate_finance_narrative(assessment: FinanceAssessment) -> SpecialistNarrative by llm(
+def request_finance_narrative(assessment: FinanceAssessment) -> FinanceNarrativeDraft by llm(
     temperature=0.0, max_output_retries=1
 );
+
+def generate_finance_narrative(assessment: FinanceAssessment) -> SpecialistNarrative {
+    if not openai_narratives_configured() {
+        return fallback_finance_narrative(assessment);
+    }
+    draft = request_finance_narrative(assessment);
+    if draft is None {
+        return fallback_finance_narrative(assessment);
+    }
+    return SpecialistNarrative(
+        summary=draft.summary,
+        recommendation=draft.recommendation,
+        explanation=draft.explanation
+    );
+}
 
 def fallback_finance_narrative(assessment: FinanceAssessment) -> SpecialistNarrative {
     return SpecialistNarrative(
@@ -170,6 +192,6 @@ def run_finance_agent(
         ConfigurationError,
         OutputConversionError,
         FinishToolError
-    ) {}
+    ) { }
     return build_finance_result(assessment, narrative);
 }

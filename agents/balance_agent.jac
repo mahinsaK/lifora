@@ -7,6 +7,7 @@ import from jaclang.byllm.lib {
     OutputConversionError,
     RateLimitError
 }
+import from agents.llm_support { openai_narratives_configured }
 import from agents.types {
     AgentResult,
     BalanceAssessment,
@@ -145,7 +146,13 @@ def assess_balance(
     );
 }
 
-sem generate_balance_narrative = """
+obj BalanceNarrativeDraft {
+    has summary: str,
+        recommendation: str,
+        explanation: str;
+}
+
+sem request_balance_narrative = """
 Write a concise workload-balance summary, recommendation, and evidence-based
 explanation. Use only the supplied deterministic assessment. Preserve whether
 the proposal fits, maximum focused work, breaks, buffer, scheduling pressure,
@@ -153,9 +160,24 @@ urgency, and candidate next action. Explicitly state a constraint when the
 proposed work does not fit. Do not make medical or mental-health diagnoses.
 """;
 
-def generate_balance_narrative(assessment: BalanceAssessment) -> SpecialistNarrative by llm(
+def request_balance_narrative(assessment: BalanceAssessment) -> BalanceNarrativeDraft by llm(
     temperature=0.0, max_output_retries=1
 );
+
+def generate_balance_narrative(assessment: BalanceAssessment) -> SpecialistNarrative {
+    if not openai_narratives_configured() {
+        return fallback_balance_narrative(assessment);
+    }
+    draft = request_balance_narrative(assessment);
+    if draft is None {
+        return fallback_balance_narrative(assessment);
+    }
+    return SpecialistNarrative(
+        summary=draft.summary,
+        recommendation=draft.recommendation,
+        explanation=draft.explanation
+    );
+}
 
 def fallback_balance_narrative(assessment: BalanceAssessment) -> SpecialistNarrative {
     fit_label = "fits" if assessment.fits_available_time else "does not fit";
@@ -197,6 +219,6 @@ def run_balance_agent(
         ConfigurationError,
         OutputConversionError,
         FinishToolError
-    ) {}
+    ) { }
     return build_balance_result(assessment, narrative);
 }
