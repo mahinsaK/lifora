@@ -89,3 +89,14 @@ obj FinanceAssessment {
         urgency: UrgencyLevel,
         candidate_next_action: str;
 }
+
+obj BalanceAssessment {
+    has proposed_work_hours: float,
+        fits_available_time: bool,
+        maximum_realistic_focused_hours: float,
+        required_break_hours: float,
+        required_buffer_hours: float,
+        scheduling_pressure: RiskLevel,
+        urgency: UrgencyLevel,
+        candidate_next_action: str;
+}
