@@ -10,7 +10,7 @@ import from "@hugeicons/core-free-icons" {
 }
 import from ..components.ui.skeleton { Skeleton }
 import from ..components.ui.spinner { Spinner }
-import from ..components.UpdateForms { AddTaskForm, IncomeForm, ProgressForm, ExpenseForm, TimeForm, FormHeading }
+import from ..components.UpdateForms { AddTaskForm, IncomeForm, ProgressForm, ExpenseForm, TimeForm, TransactionHistory, FormHeading }
 import from ..components.PageParts { PageHeader }
 import from ..components.LiforaProvider { useLifora }
 
@@ -80,6 +80,7 @@ def:pub UpdatePage -> JsxPage {
                 <FormHeading icon={HourglassIcon} title="Available time" description="Hours you can focus tonight." />
                 <TimeForm hours={snapshot.available_time.available_hours_today} saving={saving} onSave={app["saveTime"]} />
             </section>
+            <TransactionHistory transactions={app["transactions"]} />
         </div>
     </div>;
 }

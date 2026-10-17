@@ -22,7 +22,7 @@ import from .ui.input { Input }
 import from .ui.input_group { InputGroup, InputGroupAddon, InputGroupText, InputGroupInput }
 import from .ui.spinner { Spinner }
 import from .display { fmt_money, fmt_hours, deadline_label }
-sv import from ..services.state { AcademicTaskView }
+sv import from ..services.state { AcademicTaskView, TransactionView }
 
 
 """Toggle chip used for quick picks."""
@@ -216,7 +216,7 @@ def:pub AddTaskForm(
             <FieldLabel>Importance</FieldLabel>
             <div className="flex flex-wrap gap-2">
                 {for level in [1, 2, 3, 4, 5] {
-                    <Chip label={str(level)} active={importance == level} onPick={lambda { importance = level; }} />
+                    <span key={str(level)}><Chip label={str(level)} active={importance == level} onPick={lambda { importance = level; }} /></span>
                 }}
             </div>
             <FieldDescription>1 is low priority; 5 is essential.</FieldDescription>
@@ -342,6 +342,30 @@ def:pub IncomeForm(
         </Field>
         <FormActions label="Add income" saving={saving} disabled={not valid} onSave={save} onCancel={onCancel} />
     </div>;
+}
+
+
+def:pub TransactionHistory(transactions: list[TransactionView]) -> JsxElement {
+    return <section className="flex flex-col gap-4 rounded-xl border bg-card p-5 shadow-sm lg:col-span-2">
+        <FormHeading icon={Wallet01Icon} title="Transaction history" description="Income and expenses recorded in your graph." />
+        {if len(transactions) == 0 {
+            <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">No transactions recorded yet.</p>
+        } else {
+            <ul className="divide-y rounded-lg border">
+                {for transaction in transactions {
+                    <li key={transaction.kind + transaction.id} className="flex items-center justify-between gap-4 px-4 py-3">
+                        <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{transaction.description}</p>
+                            <p className="text-xs text-muted-foreground">{transaction.occurred_on + " · " + transaction.kind.lower()}</p>
+                        </div>
+                        <span className={"shrink-0 font-semibold tabular-nums " + ("text-primary" if transaction.kind == "INCOME" else "text-risk-high")}>
+                            {("+" if transaction.kind == "INCOME" else "−") + fmt_money(transaction.amount)}
+                        </span>
+                    </li>
+                }}
+            </ul>
+        }}
+    </section>;
 }
 
 

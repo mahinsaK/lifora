@@ -1,4 +1,9 @@
-import from services.finance { add_expense, add_income, get_finance }
+import from services.finance {
+    add_expense,
+    add_income,
+    get_finance,
+    get_transactions
+}
 import from services.planning { plan_student }
 import from services.snapshot { get_student_snapshot }
 import from services.state {

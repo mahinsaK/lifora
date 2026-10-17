@@ -92,6 +92,15 @@ obj IncomeRecordResult {
 }
 
 
+obj TransactionView {
+    has id: str;
+    has kind: str;
+    has amount: float;
+    has description: str;
+    has occurred_on: str;
+}
+
+
 obj BudgetInitializationResult {
     has budget: Budget;
     has created: bool;

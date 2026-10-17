@@ -9,7 +9,8 @@ import from "sonner" { toast }
 import from .display { PlanStep, parse_plan, level_of, fmt_clock, next_quarter_minutes }
 sv import from ..services.state { initialize_demo_state, update_available_time }
 sv import from ..services.tasks { add_academic_task, update_task_progress }
-sv import from ..services.finance { add_expense, add_income }
+sv import from ..services.finance { add_expense, add_income, get_transactions }
+sv import from ..services.state { TransactionView }
 sv import from ..services.snapshot { StudentSnapshot, get_student_snapshot }
 sv import from ..services.planning { plan_student }
 sv import from ..agents.types { PlanningResponse }
@@ -58,7 +59,8 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         previousRemaining: float = -1.0,
         previousHours: float = -1.0,
         dialog: str = "",
-        saving: bool = False;
+        saving: bool = False,
+        transactions: list[TransactionView] = [];
 
     async can with entry {
         await load_state();
@@ -70,6 +72,7 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         try {
             await initialize_demo_state();
             snapshot = await get_student_snapshot();
+            transactions = await get_transactions();
         } except Exception as err {
             bootError = "We couldn't load your student data.";
         }
@@ -111,6 +114,7 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
     async def after_change(message: str) -> None {
         fresh = await get_student_snapshot();
         snapshot = fresh;
+        transactions = await get_transactions();
         dialog = "";
         toast.success(message, {"description": "Replanning with your new situation…" if plan else "Ask Lifora when you're ready."});
         if plan {
@@ -246,6 +250,7 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         "previousHours": previousHours,
         "dialog": dialog,
         "saving": saving,
+        "transactions": transactions,
         "reload": load_state,
         "runPlan": run_plan,
         "clearPlanError": lambda { planError = ""; },

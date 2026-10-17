@@ -205,3 +205,20 @@ test "income validates amount description and date" {
     );
     remove_finance_test_student(student_id);
 }
+
+
+test "transaction history combines income and expenses newest first" {
+    student_id = "phase-history-fixture";
+    student = create_finance_test_student(student_id);
+    _ = initialize_budget(student, 7000.0, 7000.0, 4);
+    _ = record_student_expense(student_id, "older-expense", 500.0, "Bus", "2026-10-15");
+    _ = record_student_income(student_id, "newer-income", 1000.0, "Allowance", "2026-10-16");
+
+    history = get_student_transactions(student_id);
+    assert len(history) == 2;
+    assert history[0].id == "newer-income";
+    assert history[0].kind == "INCOME";
+    assert history[1].id == "older-expense";
+    assert history[1].kind == "EXPENSE";
+    remove_finance_test_student(student_id);
+}

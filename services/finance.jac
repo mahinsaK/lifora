@@ -9,6 +9,7 @@ import from services.state {
     HasIncome,
     Income,
     IncomeRecordResult,
+    TransactionView,
     HasExpense,
     find_budget,
     find_expense,
@@ -48,6 +49,42 @@ def get_student_finance(student_id: str) -> FinanceView {
         raise ValueError(f"Budget for student '{student_id}' was not found.");
     }
     return build_finance_view(budget);
+}
+
+
+def get_student_transactions(student_id: str) -> list[TransactionView] {
+    student = find_student(student_id);
+    if student is None {
+        raise ValueError(f"Student '{student_id}' was not found.");
+    }
+    budget = find_budget(student);
+    if budget is None {
+        raise ValueError(f"Budget for student '{student_id}' was not found.");
+    }
+    transactions: list[TransactionView] = [];
+    for expense in [budget ->:HasExpense:->] {
+        transactions.append(TransactionView(
+            id=expense.expense_id,
+            kind="EXPENSE",
+            amount=expense.amount,
+            description=expense.description,
+            occurred_on=expense.spent_on
+        ));
+    }
+    for income in [budget ->:HasIncome:->] {
+        transactions.append(TransactionView(
+            id=income.income_id,
+            kind="INCOME",
+            amount=income.amount,
+            description=income.description,
+            occurred_on=income.received_on
+        ));
+    }
+    return sorted(
+        transactions,
+        key=lambda (item: TransactionView) { item.occurred_on + item.id; },
+        reverse=True
+    );
 }
 
 
@@ -133,6 +170,11 @@ def record_student_income(
 
 def:pub get_finance -> FinanceView {
     return get_student_finance(DEMO_STUDENT_ID);
+}
+
+
+def:pub get_transactions -> list[TransactionView] {
+    return get_student_transactions(DEMO_STUDENT_ID);
 }
 
 
