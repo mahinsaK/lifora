@@ -1,4 +1,11 @@
-import from jaclang.byllm.lib { ByLLMError }
+import from jaclang.byllm.lib {
+    AuthenticationError,
+    ConfigurationError,
+    FinishToolError,
+    ModelNotFoundError,
+    OutputConversionError,
+    RateLimitError
+}
 import from agents.types {
     AgentResult,
     Domain,
@@ -119,7 +126,7 @@ credit, or loan advice.
 """;
 
 def generate_finance_narrative(assessment: FinanceAssessment) -> SpecialistNarrative by llm(
-    temperature=0.0
+    temperature=0.0, max_output_retries=1
 );
 
 def fallback_finance_narrative(assessment: FinanceAssessment) -> SpecialistNarrative {
@@ -149,8 +156,13 @@ def run_finance_agent(finance: FinanceSnapshot) -> AgentResult {
     narrative = fallback_finance_narrative(assessment);
     try {
         narrative = generate_finance_narrative(assessment);
-    } except ByLLMError {
-        narrative = fallback_finance_narrative(assessment);
-    }
+    } except (
+        AuthenticationError,
+        RateLimitError,
+        ModelNotFoundError,
+        ConfigurationError,
+        OutputConversionError,
+        FinishToolError
+    ) {}
     return build_finance_result(assessment, narrative);
 }

@@ -1,16 +1,12 @@
-import from jaclang.byllm.lib { AuthenticationError, MockError, MockLLM }
+import from jaclang.byllm.lib {
+    AuthenticationError,
+    MockError,
+    MockLLM,
+    MockRawResponse
+}
 import from agents.mock_snapshot { build_demo_snapshot }
 
-glob llm = MockLLM(
-         outputs=[
-             {
-                 "summary": "The ML assignment has the strongest deadline pressure.",
-                 "recommendation": "Start the ML assignment now.",
-                 "explanation": "It is due first, has three hours remaining, and is only 40 percent complete."
-             },
-             MockError(error=AuthenticationError("test API key failure"))
-         ]
-     ),
+glob llm = MockLLM(outputs=[]),
      FIXED_ACADEMIC_NOW = "2026-10-17T18:00:00+05:30";
 
 test "academic assessment selects the most urgent unfinished task" {
@@ -65,6 +61,15 @@ test "academic result keeps deterministic fields locked" {
 }
 
 test "academic agent uses byLLM only for narrative fields" {
+    llm = MockLLM(
+        outputs=[
+            {
+                "summary": "The ML assignment has the strongest deadline pressure.",
+                "recommendation": "Start the ML assignment now.",
+                "explanation": "It is due first, has three hours remaining, and is only 40 percent complete."
+            }
+        ]
+    );
     snapshot = build_demo_snapshot();
     result = run_academic_agent(
         FIXED_ACADEMIC_NOW,
@@ -77,9 +82,13 @@ test "academic agent uses byLLM only for narrative fields" {
     assert result.urgency == UrgencyLevel.HIGH;
     assert result.required_time == 3.0;
     assert result.summary == "The ML assignment has the strongest deadline pressure.";
+    assert llm.exhausted();
 }
 
-test "academic agent preserves its result when byLLM fails" {
+test "academic agent falls back after authentication failure" {
+    llm = MockLLM(
+        outputs=[MockError(error=AuthenticationError(message="test API key failure"))]
+    );
     snapshot = build_demo_snapshot();
     result = run_academic_agent(
         FIXED_ACADEMIC_NOW,
@@ -92,4 +101,33 @@ test "academic agent preserves its result when byLLM fails" {
     assert result.required_time == 3.0;
     assert "AI reasoning was unavailable" in result.reasoning;
     assert llm.exhausted();
+}
+
+test "academic agent falls back after typed output conversion failure" {
+    llm = MockLLM(outputs=[MockRawResponse(content="{"), MockRawResponse(content="{")]);
+    snapshot = build_demo_snapshot();
+    result = run_academic_agent(
+        FIXED_ACADEMIC_NOW,
+        snapshot.academic_tasks,
+        snapshot.available_time.available_hours_today
+    );
+
+    assert result.risk_level == RiskLevel.HIGH;
+    assert result.urgency == UrgencyLevel.HIGH;
+    assert result.required_time == 3.0;
+    assert "AI reasoning was unavailable" in result.reasoning;
+    assert llm.exhausted();
+}
+
+test "academic agent does not silently catch unrelated failures" {
+    llm = MockLLM(outputs=[MockError(error=ValueError("unexpected test failure"))]);
+    snapshot = build_demo_snapshot();
+
+    with testraises(ValueError) {
+        run_academic_agent(
+            FIXED_ACADEMIC_NOW,
+            snapshot.academic_tasks,
+            snapshot.available_time.available_hours_today
+        );
+    }
 }

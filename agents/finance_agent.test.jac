@@ -1,16 +1,7 @@
-import from jaclang.byllm.lib { AuthenticationError, MockError, MockLLM }
+import from jaclang.byllm.lib { MockError, MockLLM, ModelNotFoundError, RateLimitError }
 import from agents.mock_snapshot { build_demo_snapshot }
 
-glob llm = MockLLM(
-         outputs=[
-             {
-                 "summary": "Today's spending creates high budget pressure.",
-                 "recommendation": "Reduce optional spending for the rest of the week.",
-                 "explanation": "Today's spending is above the calculated daily allowance."
-             },
-             MockError(error=AuthenticationError("test API key failure"))
-         ]
-     );
+glob llm = MockLLM(outputs=[]);
 
 test "finance assessment calculates the documented demo budget" {
     snapshot = build_demo_snapshot();
@@ -96,6 +87,15 @@ test "finance result keeps deterministic fields locked" {
 }
 
 test "finance agent uses byLLM only for narrative fields" {
+    llm = MockLLM(
+        outputs=[
+            {
+                "summary": "Today's spending creates high budget pressure.",
+                "recommendation": "Reduce optional spending for the rest of the week.",
+                "explanation": "Today's spending is above the calculated daily allowance."
+            }
+        ]
+    );
     snapshot = build_demo_snapshot();
     result = run_finance_agent(snapshot.finance);
 
@@ -104,9 +104,27 @@ test "finance agent uses byLLM only for narrative fields" {
     assert result.urgency == UrgencyLevel.HIGH;
     assert result.required_time == 0.0;
     assert result.summary == "Today's spending creates high budget pressure.";
+    assert llm.exhausted();
 }
 
-test "finance agent preserves its result when byLLM fails" {
+test "finance agent falls back after rate-limit failure" {
+    llm = MockLLM(
+        outputs=[MockError(error=RateLimitError(message="test rate limit failure"))]
+    );
+    snapshot = build_demo_snapshot();
+    result = run_finance_agent(snapshot.finance);
+
+    assert result.risk_level == RiskLevel.HIGH;
+    assert result.urgency == UrgencyLevel.HIGH;
+    assert result.required_time == 0.0;
+    assert "AI reasoning was unavailable" in result.reasoning;
+    assert llm.exhausted();
+}
+
+test "finance agent falls back after missing-model failure" {
+    llm = MockLLM(
+        outputs=[MockError(error=ModelNotFoundError(message="test model failure"))]
+    );
     snapshot = build_demo_snapshot();
     result = run_finance_agent(snapshot.finance);
 

@@ -1,5 +1,12 @@
 import from math { ceil }
-import from jaclang.byllm.lib { ByLLMError }
+import from jaclang.byllm.lib {
+    AuthenticationError,
+    ConfigurationError,
+    FinishToolError,
+    ModelNotFoundError,
+    OutputConversionError,
+    RateLimitError
+}
 import from agents.types {
     AgentResult,
     BalanceAssessment,
@@ -147,7 +154,7 @@ proposed work does not fit. Do not make medical or mental-health diagnoses.
 """;
 
 def generate_balance_narrative(assessment: BalanceAssessment) -> SpecialistNarrative by llm(
-    temperature=0.0
+    temperature=0.0, max_output_retries=1
 );
 
 def fallback_balance_narrative(assessment: BalanceAssessment) -> SpecialistNarrative {
@@ -180,8 +187,13 @@ def run_balance_agent(
     narrative = fallback_balance_narrative(assessment);
     try {
         narrative = generate_balance_narrative(assessment);
-    } except ByLLMError {
-        narrative = fallback_balance_narrative(assessment);
-    }
+    } except (
+        AuthenticationError,
+        RateLimitError,
+        ModelNotFoundError,
+        ConfigurationError,
+        OutputConversionError,
+        FinishToolError
+    ) {}
     return build_balance_result(assessment, narrative);
 }

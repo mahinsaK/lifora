@@ -1,4 +1,11 @@
-import from jaclang.byllm.lib { ByLLMError }
+import from jaclang.byllm.lib {
+    AuthenticationError,
+    ConfigurationError,
+    FinishToolError,
+    ModelNotFoundError,
+    OutputConversionError,
+    RateLimitError
+}
 import from agents.deadline_risk { assess_deadline_risk, hours_before_deadline }
 import from agents.types {
     AcademicAssessment,
@@ -137,7 +144,7 @@ urgency, required time, and candidate next action; do not recalculate them.
 """;
 
 def generate_academic_narrative(assessment: AcademicAssessment) -> SpecialistNarrative by llm(
-    temperature=0.0
+    temperature=0.0, max_output_retries=1
 );
 
 def fallback_academic_narrative(assessment: AcademicAssessment) -> SpecialistNarrative {
@@ -176,8 +183,13 @@ def run_academic_agent(
     narrative = fallback_academic_narrative(assessment);
     try {
         narrative = generate_academic_narrative(assessment);
-    } except ByLLMError {
-        narrative = fallback_academic_narrative(assessment);
-    }
+    } except (
+        AuthenticationError,
+        RateLimitError,
+        ModelNotFoundError,
+        ConfigurationError,
+        OutputConversionError,
+        FinishToolError
+    ) {}
     return build_academic_result(assessment, narrative);
 }
