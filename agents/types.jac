@@ -100,3 +100,22 @@ obj BalanceAssessment {
         urgency: UrgencyLevel,
         candidate_next_action: str;
 }
+
+obj CoordinatorPreparation {
+    has ranked_domains: list[Domain],
+        candidate_actions: list[str],
+        candidate_work_blocks: list[str],
+        conflicts: list[str],
+        finance_action: str,
+        fallback_next_action: str,
+        fallback_daily_plan: list[str],
+        fallback_explanation: str,
+        fallback_deprioritized: list[str];
+}
+
+obj CoordinatorNarrative {
+    has next_action: str,
+        daily_plan: list[str],
+        explanation: str,
+        deprioritized: list[str];
+}
