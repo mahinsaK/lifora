@@ -308,6 +308,43 @@ def:pub ExpenseForm(
 }
 
 
+def:pub IncomeForm(
+    saving: bool,
+    onSave: Callable[[float, str, str], None],
+    onCancel: Callable[[], None] | None = None
+) -> JsxElement {
+    has amountText: str = "",
+        description: str = "",
+        receivedOn: str = "";
+    parsed = float(amountText) if amountText else 0.0;
+    amount = 0.0 if parsed != parsed else parsed;
+    valid = amount > 0 and bool(description.strip()) and bool(receivedOn);
+
+    def save {
+        onSave(amount, description.strip(), receivedOn);
+    }
+
+    return <div className="flex flex-col gap-4">
+        <Field>
+            <FieldLabel htmlFor="income-amount">Amount</FieldLabel>
+            <InputGroup className="h-11">
+                <InputGroupAddon><InputGroupText>Rs.</InputGroupText></InputGroupAddon>
+                <InputGroupInput id="income-amount" type="number" min="0" inputMode="decimal" placeholder="5000" value={amountText} onChange={lambda (e: ChangeEvent) { amountText = e.target.value; }} />
+            </InputGroup>
+        </Field>
+        <Field>
+            <FieldLabel htmlFor="income-description">Description</FieldLabel>
+            <Input id="income-description" placeholder="Allowance or part-time work" value={description} onChange={lambda (e: ChangeEvent) { description = e.target.value; }} />
+        </Field>
+        <Field>
+            <FieldLabel htmlFor="income-date">Date received</FieldLabel>
+            <Input id="income-date" type="date" value={receivedOn} onChange={lambda (e: ChangeEvent) { receivedOn = e.target.value; }} />
+        </Field>
+        <FormActions label="Add income" saving={saving} disabled={not valid} onSave={save} onCancel={onCancel} />
+    </div>;
+}
+
+
 def:pub TimeForm(
     hours: float,
     saving: bool,
@@ -370,6 +407,7 @@ def:pub UpdateDialog(
     saving: bool,
     onClose: Callable[[], None],
     onSaveTask: Callable[[str, str, float, float, int], None],
+    onSaveIncome: Callable[[float, str, str], None],
     onSaveProgress: Callable[[str, float], None],
     onSaveExpense: Callable[[float, str], None],
     onSaveTime: Callable[[float], None]
@@ -381,6 +419,10 @@ def:pub UpdateDialog(
         title = "Add academic task";
         description = "Add a deadline so Lifora can prioritize it.";
         icon = PlusSignIcon;
+    } elif kind == "income" {
+        title = "Add income";
+        description = "Add funds to this week's available budget.";
+        icon = Wallet01Icon;
     } elif kind == "expense" {
         title = "Add expense";
         description = "Logged to today's spending.";
@@ -410,6 +452,7 @@ def:pub UpdateDialog(
             </DialogHeader>
             {kind == "progress" and <ProgressForm tasks={tasks} saving={saving} onSave={onSaveProgress} onCancel={onClose} />}
             {kind == "task" and <AddTaskForm saving={saving} onSave={onSaveTask} onCancel={onClose} />}
+            {kind == "income" and <IncomeForm saving={saving} onSave={onSaveIncome} onCancel={onClose} />}
             {kind == "expense" and <ExpenseForm remaining={remaining} saving={saving} onSave={onSaveExpense} onCancel={onClose} />}
             {kind == "time" and <TimeForm hours={hours} saving={saving} onSave={onSaveTime} onCancel={onClose} />}
         </DialogContent>

@@ -78,6 +78,20 @@ obj ExpenseRecordResult {
 }
 
 
+obj IncomeView {
+    has id: str;
+    has amount: float;
+    has description: str;
+    has received_on: str;
+}
+
+
+obj IncomeRecordResult {
+    has income: IncomeView;
+    has finance: FinanceView;
+}
+
+
 obj BudgetInitializationResult {
     has budget: Budget;
     has created: bool;
@@ -155,9 +169,27 @@ node Expense {
 }
 
 
+node Income {
+    has income_id: str;
+    has amount: float;
+    has description: str;
+    has received_on: str;
+
+    def to_view -> IncomeView {
+        return IncomeView(
+            id=self.income_id,
+            amount=self.amount,
+            description=self.description,
+            received_on=self.received_on
+        );
+    }
+}
+
+
 edge HasAcademicTask: Student --> AcademicTask {}
 edge HasBudget: Student --> Budget {}
 edge HasExpense: Budget --> Expense {}
+edge HasIncome: Budget --> Income {}
 
 
 def validate_available_hours(available_hours_today: float) {
@@ -219,6 +251,23 @@ def validate_expense_values(
 }
 
 
+def validate_income_values(
+    income_id: str,
+    amount: float,
+    description: str
+) {
+    if not income_id.strip() {
+        raise ValueError("Income ID is required.");
+    }
+    if amount <= 0.0 {
+        raise ValueError("Income amount must be greater than zero.");
+    }
+    if not description.strip() {
+        raise ValueError("Income description is required.");
+    }
+}
+
+
 def normalize_expense_date(spent_on: str) -> str {
     try {
         return date.fromisoformat(spent_on).isoformat();
@@ -261,6 +310,16 @@ def find_expense(budget: Budget, expense_id: str) -> Expense | None {
     for expense in [budget ->:HasExpense:->] {
         if expense.expense_id == expense_id {
             return expense;
+        }
+    }
+    return None;
+}
+
+
+def find_income(budget: Budget, income_id: str) -> Income | None {
+    for income in [budget ->:HasIncome:->] {
+        if income.income_id == income_id {
+            return income;
         }
     }
     return None;

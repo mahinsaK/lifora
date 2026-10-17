@@ -9,7 +9,7 @@ import from "sonner" { toast }
 import from .display { PlanStep, parse_plan, level_of, fmt_clock, next_quarter_minutes }
 sv import from ..services.state { initialize_demo_state, update_available_time }
 sv import from ..services.tasks { add_academic_task, update_task_progress }
-sv import from ..services.finance { add_expense }
+sv import from ..services.finance { add_expense, add_income }
 sv import from ..services.snapshot { StudentSnapshot, get_student_snapshot }
 sv import from ..services.planning { plan_student }
 sv import from ..agents.types { PlanningResponse }
@@ -184,6 +184,21 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         }
     }
 
+    async def save_income(amount: float, description: str, received_on: str) -> None {
+        saving = True;
+        before = snapshot.finance.remaining_budget if snapshot else -1.0;
+        transaction_id = "income-" + str(Date.now());  # jac:ignore[W2001]
+        try {
+            await add_income(transaction_id, amount, description, received_on);
+            previousRemaining = before;
+            saving = False;
+            await after_change("Income added");
+        } except Exception as err {
+            saving = False;
+            toast.error("Couldn't add the income", {"description": error_text(err)});
+        }
+    }
+
     async def save_time(available_hours_today: float) -> None {
         saving = True;
         before = snapshot.available_time.available_hours_today if snapshot else -1.0;
@@ -237,6 +252,7 @@ def:pub LiforaProvider(children: any = None) -> JsxElement {
         "saveProgress": save_progress,
         "saveTask": save_task,
         "saveExpense": save_expense,
+        "saveIncome": save_income,
         "saveTime": save_time,
         "setDialog": set_dialog
     };

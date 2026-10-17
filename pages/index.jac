@@ -109,6 +109,7 @@ def:pub OverviewPage -> JsxPage {
                     <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} className="size-4" />
                     Add Task
                 </Button>
+                <Button variant="outline" onClick={lambda (e: MouseEvent) { set_dialog.call(None, "income"); }}>Add Income</Button>
                 <Button variant="outline" onClick={lambda (e: MouseEvent) { set_dialog.call(None, "expense"); }}>Add Expense</Button>
                 <Button variant="outline" onClick={lambda (e: MouseEvent) { set_dialog.call(None, "time"); }}>Update Available Time</Button>
             </div>
