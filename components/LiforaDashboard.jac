@@ -3,7 +3,7 @@ import from "@hugeicons/core-free-icons" { BookOpen01Icon, Wallet01Icon, Clock01
 import from .ui.button { Button }
 import from .ui.card { Card, CardHeader, CardTitle, CardDescription, CardContent }
 
-def:pub LiforaDashboard() -> JsxElement {
+def:pub LiforaDashboard -> JsxElement {
     return <main className="min-h-svh bg-muted/40 px-4 py-6 sm:px-8 sm:py-10">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
             <header className="flex flex-wrap items-center justify-between gap-4">

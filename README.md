@@ -18,7 +18,7 @@ here when none of the other templates fit, and describe what you want to build.
 
 ```bash
 jac install
-jac start --dev
+jac run --dev
 ```
 
 Open <http://localhost:8000>.
