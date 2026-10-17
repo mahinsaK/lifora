@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  jac-check:
+    name: Jac check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install Jac
+        env:
+          JAC_VERSION: 0.37.25
+        run: |
+          curl --fail --silent --show-error --location \
+            https://raw.githubusercontent.com/jaseci-labs/jaseci/main/scripts/install.sh \
+            | bash -s -- --version "$JAC_VERSION"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Show Jac version
+        run: jac --version
+
+      - name: Install project dependencies
+        run: jac install --frozen
+
+      - name: Type-check and lint Jac sources
+        run: jac check
