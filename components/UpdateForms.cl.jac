@@ -585,6 +585,7 @@ def:pub TimeForm(
     }
 
     return <div className="flex flex-col gap-5">
+        <p className="rounded-lg border border-primary/15 bg-primary/[0.04] px-3 py-2.5 text-sm text-muted-foreground"><span className="font-semibold text-foreground">What counts?</span>{" Only realistic focused study or work time still available today—after classes, travel, meals, rest, and other commitments."}</p>
         <div className="flex items-center justify-between gap-4 rounded-xl border bg-muted/40 px-4 py-3">
             <Button variant="outline" size="icon" aria-label="Less time" onClick={lambda (e: MouseEvent) { step(-0.5); }}>
                 <HugeiconsIcon icon={MinusSignIcon} strokeWidth={2} className="size-4" />
@@ -608,7 +609,7 @@ def:pub TimeForm(
                 <Chip label="5h" active={value == 5} onPick={lambda { value = 5.0; }} />
                 <Chip label="6h" active={value == 6} onPick={lambda { value = 6.0; }} />
             </div>
-            <FieldDescription>Count only time you can actually focus, not the whole evening.</FieldDescription>
+            <FieldDescription>This helps the Balance Agent create a plan you can actually finish.</FieldDescription>
         </Field>
 
         <FormActions label="Save time" saving={saving} disabled={value == hours} onSave={save} onCancel={onCancel} />
@@ -652,8 +653,8 @@ def:pub UpdateDialog(
         description = "Logged to today's spending.";
         icon = Wallet01Icon;
     } elif kind == "time" {
-        title = "Update available time";
-        description = "How many hours can you realistically use tonight?";
+        title = "Update focus time";
+        description = "How many focused study or work hours can you realistically use today?";
         icon = HourglassIcon;
     }
 

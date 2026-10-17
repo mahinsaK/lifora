@@ -25,9 +25,9 @@ def AgentChip(label: str, icon: any, tone: str, busy: bool) -> JsxElement {
 
 def AgentFlow(busy: bool) -> JsxElement {
     return <div className="flex flex-wrap items-center justify-center gap-2">
-        <AgentChip label="Academic Agent" icon={BookOpen01Icon} tone="text-agent-academic" busy={busy} />
-        <AgentChip label="Finance Agent" icon={Wallet01Icon} tone="text-agent-finance" busy={busy} />
-        <AgentChip label="Balance Agent" icon={HourglassIcon} tone="text-agent-balance" busy={busy} />
+        <AgentChip label="Academic · deadlines" icon={BookOpen01Icon} tone="text-agent-academic" busy={busy} />
+        <AgentChip label="Finance · spending" icon={Wallet01Icon} tone="text-agent-finance" busy={busy} />
+        <AgentChip label="Balance · time" icon={HourglassIcon} tone="text-agent-balance" busy={busy} />
         <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4 text-muted-foreground" />
         <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
             <HugeiconsIcon icon={AiNetworkIcon} strokeWidth={2} className="size-3.5" />

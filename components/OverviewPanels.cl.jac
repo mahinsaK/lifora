@@ -32,7 +32,7 @@ def MetricCard(
         <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
             <p className="truncate text-2xl font-semibold tracking-tight">{value}</p>
-            <p className="truncate text-xs text-muted-foreground">{detail}</p>
+            <p className="text-xs leading-relaxed text-muted-foreground">{detail}</p>
         </div>
         {risk and <RiskBadge level={risk} />}
     </article>;
@@ -47,16 +47,18 @@ def:pub SituationSummary(snapshot: StudentSnapshot, plan: PlanningResponse | Non
     return <section aria-labelledby="situation" className="flex flex-col gap-3">
         <div className="flex items-end justify-between gap-3">
             <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-primary">Live student snapshot</p>
-                <h2 id="situation" className="text-lg font-semibold tracking-tight">Your situation at a glance</h2>
+                <p className="text-xs font-semibold uppercase tracking-wider text-primary">Inputs to your decision</p>
+                <h2 id="situation" className="text-lg font-semibold tracking-tight">What Lifora is balancing right now</h2>
+                <p className="text-sm text-muted-foreground">These three constraints shape the next action Lifora recommends.</p>
             </div>
             <Link to="/update" className="text-sm font-medium text-primary hover:underline">Update details</Link>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
-            <MetricCard label="Academic" value={str(openTasks) + (" open task" if openTasks == 1 else " open tasks")} detail="Deadlines and coursework" icon={BookOpen01Icon} risk={academicRisk} />
-            <MetricCard label="Money left" value={fmt_money(snapshot.finance.remaining_budget)} detail={str(snapshot.finance.days_remaining) + " days remaining"} icon={Wallet01Icon} risk={financeRisk} />
-            <MetricCard label="Available time" value={fmt_hours(snapshot.available_time.available_hours_today)} detail="Focused time tonight" icon={HourglassIcon} risk={balanceRisk} />
+            <MetricCard label="Coursework pressure" value={str(openTasks) + (" unfinished task" if openTasks == 1 else " unfinished tasks")} detail="Deadlines, progress, and work still required" icon={BookOpen01Icon} risk={academicRisk} />
+            <MetricCard label="Spending room" value={fmt_money(snapshot.finance.remaining_budget)} detail={"Available for the next " + str(snapshot.finance.days_remaining) + " days"} icon={Wallet01Icon} risk={financeRisk} />
+            <MetricCard label="Focus time left today" value={fmt_hours(snapshot.available_time.available_hours_today)} detail="Realistic study or work time after other commitments" icon={HourglassIcon} risk={balanceRisk} />
         </div>
+        <p className="flex items-start gap-2 rounded-xl border border-primary/15 bg-primary/[0.04] px-4 py-3 text-sm text-muted-foreground"><HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} className="mt-0.5 size-4 shrink-0 text-primary" /><span><span className="font-semibold text-foreground">Focus time is not your whole evening.</span>{" It is the time you can realistically use after classes, travel, meals, rest, and other commitments."}</span></p>
     </section>;
 }
 
@@ -73,13 +75,13 @@ def:pub QuickActions(onOpen: Callable[[str], None]) -> JsxElement {
     return <section aria-labelledby="quick-actions" className="rounded-2xl border bg-card p-4 shadow-sm sm:p-5">
         <div className="mb-4">
             <h2 id="quick-actions" className="font-semibold">Quick actions</h2>
-            <p className="text-sm text-muted-foreground">Update only what changed. Lifora handles the replanning.</p>
+            <p className="text-sm text-muted-foreground">Keep the three decision inputs accurate. Lifora handles the replanning.</p>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <QuickAction label="Add task" detail="Deadline and effort" icon={BookOpen01Icon} onPick={lambda { onOpen("task"); }} />
-            <QuickAction label="Add income" detail="Increase available funds" icon={AddCircleIcon} onPick={lambda { onOpen("income"); }} />
-            <QuickAction label="Add expense" detail="Record new spending" icon={Wallet01Icon} onPick={lambda { onOpen("expense"); }} />
-            <QuickAction label="Update time" detail="Hours available tonight" icon={HourglassIcon} onPick={lambda { onOpen("time"); }} />
+            <QuickAction label="Add task" detail="Tell Lifora what is due" icon={BookOpen01Icon} onPick={lambda { onOpen("task"); }} />
+            <QuickAction label="Add income" detail="Increase this week's spending room" icon={AddCircleIcon} onPick={lambda { onOpen("income"); }} />
+            <QuickAction label="Add expense" detail="Reduce this week's spending room" icon={Wallet01Icon} onPick={lambda { onOpen("expense"); }} />
+            <QuickAction label="Update focus time" detail="Set realistic hours left today" icon={HourglassIcon} onPick={lambda { onOpen("time"); }} />
         </div>
     </section>;
 }
@@ -102,7 +104,7 @@ def:pub DemoPath(
                 </div>
             </div>
             <ol className="grid gap-3 md:grid-cols-3">
-                <li className="rounded-xl border bg-background/80 p-4"><span className="text-xs font-semibold text-primary">01 · Decide</span><p className="mt-1 text-sm font-medium">Generate the best next action</p><Button size="sm" className="mt-3 w-full" disabled={planning} onClick={lambda (e: MouseEvent) { onRun(); }}>{"Planning…" if planning else ("Re-run plan" if hasPlan else "Plan my day")}</Button></li>
+                <li className="rounded-xl border bg-background/80 p-4"><span className="text-xs font-semibold text-primary">01 · Decide</span><p className="mt-1 text-sm font-medium">Choose the smartest next action</p><Button size="sm" className="mt-3 w-full" disabled={planning} onClick={lambda (e: MouseEvent) { onRun(); }}>{"Deciding…" if planning else ("Re-run decision" if hasPlan else "Find my next step")}</Button></li>
                 <li className="rounded-xl border bg-background/80 p-4"><span className="text-xs font-semibold text-primary">02 · Adapt</span><p className="mt-1 text-sm font-medium">Log a surprise expense</p><Button size="sm" variant="outline" className="mt-3 w-full" onClick={lambda (e: MouseEvent) { onExpense(); }}>Add expense</Button></li>
                 <li className="rounded-xl border bg-background/80 p-4"><span className="text-xs font-semibold text-primary">03 · Explore</span><p className="mt-1 text-sm font-medium">Test a change without saving it</p><Link to="/whatif" className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border bg-background px-3 text-sm font-medium hover:bg-muted">Open What-If <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" /></Link></li>
             </ol>

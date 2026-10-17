@@ -37,7 +37,7 @@ def:pub DecisionTrace(
 
         <div className="flex flex-col gap-2.5">
             <AgentRow
-                name="Academic Agent"
+                name="Academic Agent · deadlines and workload"
                 icon={BookOpen01Icon}
                 tone="text-agent-academic"
                 border="border-l-agent-academic"
@@ -45,7 +45,7 @@ def:pub DecisionTrace(
                 previousUrgency={previous["academic"] or ""}
             />
             <AgentRow
-                name="Finance Agent"
+                name="Finance Agent · spending safety"
                 icon={Wallet01Icon}
                 tone="text-agent-finance"
                 border="border-l-agent-finance"
@@ -53,7 +53,7 @@ def:pub DecisionTrace(
                 previousUrgency={previous["finance"] or ""}
             />
             <AgentRow
-                name="Balance Agent"
+                name="Balance Agent · time and recovery"
                 icon={HourglassIcon}
                 tone="text-agent-balance"
                 border="border-l-agent-balance"

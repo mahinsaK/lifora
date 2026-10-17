@@ -32,18 +32,18 @@ def:pub HeroPanel(
     onRun: Callable[[], None]
 ) -> JsxElement {
     first_name = name.split(" ")[0] if name else "there";
-    label = "Plan My Day";
+    label = "Find My Next Step";
     if hasResult {
-        label = "Update My Plan" if stale else "Re-run Plan";
+        label = "Update My Next Step" if stale else "Re-run Decision";
     }
 
     caption = <span className="inline-flex items-center gap-1.5">
         <HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} className="size-3.5" />
-        Lifora asks 3 specialist agents, then decides one next step.
+        Three specialists compare coursework, spending, and focus time. One coordinator chooses the next step.
     </span>;
     if thinking {
         caption = <span className="inline-flex items-center gap-1.5 text-primary">
-            Weighing deadlines, budget and time…
+            Comparing coursework pressure, spending room, and focus time…
         </span>;
     } elif stale {
         caption = <span className="inline-flex items-center gap-1.5 font-medium text-primary">
@@ -67,9 +67,9 @@ def:pub HeroPanel(
             <div className="flex max-w-2xl flex-col gap-2">
                 <p className="text-sm font-medium text-primary">{greeting() + ", " + first_name}</p>
                 <h1 className="text-balance text-2xl font-semibold leading-tight tracking-tight sm:text-3xl lg:text-4xl">
-                    Know what to do next—without ignoring the rest of your life.
+                    One clear next step for your whole student life.
                 </h1>
-                <p className="text-sm text-muted-foreground sm:text-base">Lifora balances deadlines, money, and available time into one clear plan.</p>
+                <p className="text-sm text-muted-foreground sm:text-base">Lifora weighs what is due, what you can afford, and how many focused hours you realistically have left today.</p>
             </div>
             <div className="flex flex-col gap-2 lg:items-end">
                 <Button

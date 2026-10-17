@@ -44,7 +44,7 @@ def:pub UpdatePage -> JsxPage {
         } elif plan and app["previous"]["action"] {
             <Link to="/plan" className="group flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm"><span><span className="font-semibold text-primary">Plan updated. </span>{plan.coordinator.next_action}</span><HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4 text-primary" /></Link>
         } elif not plan {
-            <p className="flex items-center gap-2 rounded-xl border bg-card px-4 py-3 text-sm text-muted-foreground"><HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} className="size-4" />No plan yet. Your changes will be ready when you select Plan My Day.</p>
+            <p className="flex items-center gap-2 rounded-xl border bg-card px-4 py-3 text-sm text-muted-foreground"><HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} className="size-4" />No decision yet. Your changes will be ready when you select Find My Next Step.</p>
         }}
 
         {if not snapshot {
@@ -58,7 +58,7 @@ def:pub UpdatePage -> JsxPage {
                 <ActionCard title="Add task" detail="Create coursework with its deadline and effort." icon={BookOpen01Icon} onOpen={lambda { set_dialog.call(None, "task"); }} />
                 <ActionCard title="Add income" detail="Add allowance, salary, or other available funds." icon={AddCircleIcon} onOpen={lambda { set_dialog.call(None, "income"); }} />
                 <ActionCard title="Add expense" detail="Record spending and update your weekly balance." icon={Wallet01Icon} onOpen={lambda { set_dialog.call(None, "expense"); }} />
-                <ActionCard title="Update time" detail="Set the focused hours you have available tonight." icon={HourglassIcon} onOpen={lambda { set_dialog.call(None, "time"); }} />
+                <ActionCard title="Update focus time" detail="Set realistic study or work hours left today." icon={HourglassIcon} onOpen={lambda { set_dialog.call(None, "time"); }} />
             </div>
         </section>
 

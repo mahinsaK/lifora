@@ -5,7 +5,7 @@ import from .display { PlanStep, fmt_hours, level_of }
 sv import from ..agents.types { AgentResult }
 
 
-"""Available Time card - the Balance Agent's domain."""
+"""Focused capacity card - the Balance Agent's domain."""
 def:pub BalanceCard(
     hours: float,
     previousHours: float,
@@ -31,11 +31,11 @@ def:pub BalanceCard(
     changed = previousHours >= 0 and previousHours != hours;
 
     return <StateCard
-        title="Available Time"
-        subtitle="Tonight's capacity"
+        title="Focus Time"
+        subtitle="Usable hours left today"
         icon={HourglassIcon}
         accent="bg-agent-balance"
-        actionLabel="Edit time"
+        actionLabel="Edit focus time"
         actionIcon={Edit02Icon}
         onAction={onEdit}
     >
@@ -43,7 +43,7 @@ def:pub BalanceCard(
             <div className="flex items-end justify-between gap-2">
                 <p className="flex items-baseline gap-2">
                     <span className="text-3xl font-semibold tabular-nums tracking-tight">{fmt_hours(hours)}</span>
-                    <span className="text-sm text-muted-foreground">available tonight</span>
+                    <span className="text-sm text-muted-foreground">realistic hours today</span>
                 </p>
                 {urgency and <LevelChange before={previousUrgency} after={urgency} />}
             </div>
@@ -61,7 +61,7 @@ def:pub BalanceCard(
                     <TimeRow dot="bg-agent-balance/40" label="Free / buffer" value={fmt_hours(free)} />
                 </dl>
             } else {
-                <p className="text-sm text-muted-foreground">Lifora will split this time into realistic focus blocks and breaks.</p>
+                <p className="text-sm text-muted-foreground">Lifora will divide these usable hours into focused work, breaks, and safety buffer.</p>
             }}
         </div>
         <AgentNote agentName="Balance Agent" text={note} tone="text-agent-balance" />
