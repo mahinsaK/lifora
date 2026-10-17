@@ -16,7 +16,7 @@ All operations are public Jac function RPCs. A Jac client component should use
 ```jac
 sv import from services.state { initialize_demo_state }
 sv import from services.snapshot { get_student_snapshot }
-sv import from services.planning { plan_student }
+sv import from services.planning { plan_student, simulate_plan }
 sv import from services.tasks { update_task_progress }
 sv import from services.finance { add_expense }
 ```
@@ -185,12 +185,40 @@ Expected demo behavior from a clean initial state:
    at the documented initial state. `initialize_demo_state` does not reset an
    already-mutated demo student.
 
+## What-If simulation
+
+The browser sends only a supported scenario key. The server fetches the current
+snapshot, copies it, applies the hypothetical change, and runs the full planning
+pipeline without persisting the copy.
+
+```text
+POST /function/simulate_plan
+{
+  "scenario": "less_time"
+}
+```
+
+```jac
+simulation = await simulate_plan("less_time");
+```
+
+Supported scenario keys are:
+
+- `less_time`: reduce today's available time by two hours, with a floor of zero.
+- `spend`: add a hypothetical Rs. 2,000 expense.
+- `finish_ml`: set the ML assignment to 100% progress and zero remaining hours.
+
+The returned `WhatIfResponse` contains `scenario`, the simulated `snapshot`, and
+the simulated `planning` response. Keep the real snapshot and planning response
+visible beside these values. A simulation never calls a state mutation endpoint.
+
 ## Frozen endpoint list
 
 ```text
 initialize_demo_state() -> StateInitializationResult
 get_student_snapshot() -> StudentSnapshot
 plan_student(snapshot: StudentSnapshot) -> PlanningResponse
+simulate_plan(scenario: str) -> WhatIfResponse
 update_task_progress(task_id: str, progress: float) -> AcademicTaskView
 add_expense(
     expense_id: str,
