@@ -124,7 +124,6 @@ def assess_academic_tasks(
             candidate_next_action="No unfinished academic task requires action."
         );
     }
-
     selected_task = selected as AcademicTask;
 
     return AcademicAssessment(
