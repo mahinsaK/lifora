@@ -1,18 +1,18 @@
-import from agents.types {
-    AcademicTask,
-    AvailableTime,
-    FinanceSnapshot,
-    Profile,
-    StudentSnapshot
+import from services.snapshot { StudentSnapshot }
+import from services.state {
+    AcademicTaskView as AcademicTask,
+    AvailableTimeView as AvailableTime,
+    FinanceView as FinanceSnapshot,
+    ProfileView as Profile
 }
 
 def build_demo_snapshot -> StudentSnapshot {
     return StudentSnapshot(
-        profile=Profile(name="Demo Student", life_stage="University student"),
+        profile=Profile(name="Demo Student", life_stage="university"),
         academic_tasks=[
             AcademicTask(
                 id="ml-assignment",
-                title="ML Assignment",
+                title="Machine Learning Assignment",
                 deadline="2026-10-18T23:59:00+05:30",
                 progress=40.0,
                 estimated_remaining_hours=3.0,
@@ -22,7 +22,7 @@ def build_demo_snapshot -> StudentSnapshot {
                 id="dsa-quiz",
                 title="DSA Quiz",
                 deadline="2026-10-19T23:59:00+05:30",
-                progress=10.0,
+                progress=20.0,
                 estimated_remaining_hours=2.0,
                 importance=4
             )
@@ -34,6 +34,6 @@ def build_demo_snapshot -> StudentSnapshot {
             days_remaining=4
         ),
         available_time=AvailableTime(available_hours_today=5.0),
-        goals=["Complete upcoming coursework", "Stay within the weekly budget"]
+        goals=[]
     );
 }

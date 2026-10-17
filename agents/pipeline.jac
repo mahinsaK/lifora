@@ -3,6 +3,8 @@ import from agents.academic_agent { generate_academic_narrative, run_academic_ag
 import from agents.balance_agent { generate_balance_narrative, run_balance_agent }
 import from agents.coordinator { generate_coordinator_narrative, run_coordinator }
 import from agents.finance_agent { generate_finance_narrative, run_finance_agent }
+import from agents.snapshot_adapter { adapt_academic_tasks }
+import from services.snapshot { StudentSnapshot }
 import from agents.types {
     AcademicAssessment,
     BalanceAssessment,
@@ -10,8 +12,7 @@ import from agents.types {
     CoordinatorPreparation,
     FinanceAssessment,
     PlanningResponse,
-    SpecialistNarrative,
-    StudentSnapshot
+    SpecialistNarrative
 }
 
 async def run_pipeline_at(
@@ -32,9 +33,10 @@ async def run_pipeline_at(
             CoordinatorNarrative
         ] = generate_coordinator_narrative
 ) -> PlanningResponse {
+    academic_tasks = adapt_academic_tasks(snapshot.academic_tasks, current_time);
     academic = run_academic_agent(
         current_time,
-        snapshot.academic_tasks,
+        academic_tasks,
         snapshot.available_time.available_hours_today,
         academic_narrative_generator
     );

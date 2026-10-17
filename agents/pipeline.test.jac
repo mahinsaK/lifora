@@ -2,6 +2,17 @@ import asyncio;
 import from jaclang.byllm.lib { AuthenticationError, MockError, MockLLM }
 import from agents.finance_agent { assess_finances }
 import from agents.mock_snapshot { build_demo_snapshot }
+import from services.snapshot { StudentSnapshot, build_student_snapshot }
+import from services.state {
+    HasAcademicTask,
+    HasBudget,
+    HasExpense,
+    Student,
+    find_student,
+    initialize_academic_task,
+    initialize_demo_finance,
+    initialize_student
+}
 import from agents.types {
     AcademicAssessment,
     BalanceAssessment,
@@ -11,7 +22,6 @@ import from agents.types {
     PlanningResponse,
     RiskLevel,
     SpecialistNarrative,
-    StudentSnapshot,
     UrgencyLevel
 }
 
@@ -64,20 +74,75 @@ def run_with_deterministic_fallback(snapshot: StudentSnapshot) -> PlanningRespon
     return response;
 }
 
+def remove_pipeline_test_student(student_id: str) {
+    student = find_student(student_id);
+    if student is not None {
+        for task in [student->:HasAcademicTask:->] {
+            del task;
+        }
+        for budget in [student->:HasBudget:->] {
+            for expense in [budget->:HasExpense:->] {
+                del expense;
+            }
+            del budget;
+        }
+        del student;
+    }
+}
+
+def build_persisted_pipeline_snapshot(student_id: str) -> StudentSnapshot {
+    remove_pipeline_test_student(student_id);
+    _ = initialize_student(student_id, "Pipeline Test Student", "university", 5.0);
+    student: Student | None = find_student(student_id);
+    if student is None {
+        raise RuntimeError("Pipeline test student initialization failed.");
+    }
+    _ = initialize_academic_task(
+        student,
+        "ml-assignment",
+        "Machine Learning Assignment",
+        "2026-10-18",
+        40.0,
+        3.0,
+        5
+    );
+    _ = initialize_academic_task(
+        student, "dsa-quiz", "DSA Quiz", "2026-10-19", 20.0, 2.0, 4
+    );
+    initialize_demo_finance(student);
+    return build_student_snapshot(student_id);
+}
+
+test "pipeline consumes the persisted service snapshot contract" {
+    student_id = "agent-pipeline-integration-fixture";
+    snapshot = build_persisted_pipeline_snapshot(student_id);
+    llm = failed_ai_model();
+    response = run_with_deterministic_fallback(snapshot);
+
+    assert snapshot.profile.life_stage == "university";
+    assert snapshot.academic_tasks[1].progress == 20.0;
+    assert snapshot.academic_tasks[1].estimated_remaining_hours == 2.0;
+    assert snapshot.academic_tasks[1].importance == 4;
+    assert snapshot.finance.days_remaining == 4;
+    assert response.academic.risk_level == RiskLevel.HIGH;
+    assert "Machine Learning Assignment" in response.coordinator.next_action;
+    remove_pipeline_test_student(student_id);
+}
+
 test "initial scenario produces a feasible ML assignment plan" {
     llm = failed_ai_model();
     response = run_with_deterministic_fallback(build_demo_snapshot());
 
     assert response.academic.urgency == UrgencyLevel.HIGH;
     assert response.academic.risk_level == RiskLevel.HIGH;
-    assert "ML Assignment" in response.academic.recommendation;
-    assert "ML Assignment" in response.coordinator.next_action;
+    assert "Machine Learning Assignment" in response.academic.recommendation;
+    assert "Machine Learning Assignment" in response.coordinator.next_action;
     assert response.balance.risk_level == RiskLevel.LOW;
     assert response.coordinator.daily_plan
         == [
-            "Focus block 1: 1.50 hours on ML Assignment",
+            "Focus block 1: 1.50 hours on Machine Learning Assignment",
             "Break: 0.25 hours",
-            "Focus block 2: 1.50 hours on ML Assignment"
+            "Focus block 2: 1.50 hours on Machine Learning Assignment"
         ];
 }
 
@@ -130,9 +195,9 @@ test "reduced available time creates a shorter feasible plan" {
     assert updated.coordinator.daily_plan != initial.coordinator.daily_plan;
     assert updated.coordinator.daily_plan
         == [
-            "Focus block 1: 1.50 hours on ML Assignment",
+            "Focus block 1: 1.50 hours on Machine Learning Assignment",
             "Break: 0.25 hours",
-            "Focus block 2: 0.05 hours on ML Assignment"
+            "Focus block 2: 0.05 hours on Machine Learning Assignment"
         ];
 }
 

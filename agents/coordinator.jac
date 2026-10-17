@@ -10,15 +10,15 @@ import from jaclang.byllm.lib {
 import from agents.balance_agent { assess_balance }
 import from agents.deadline_risk { validate_deadline_inputs }
 import from agents.finance_agent { assess_finances }
+import from services.snapshot { StudentSnapshot }
+import from services.state { AcademicTaskView as AcademicTask }
 import from agents.types {
-    AcademicTask,
     AgentResult,
     CoordinatorNarrative,
     CoordinatorPreparation,
     CoordinatorResult,
     Domain,
     RiskLevel,
-    StudentSnapshot,
     UrgencyLevel
 }
 

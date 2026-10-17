@@ -14,39 +14,6 @@ enum RiskLevel: str {
     CRITICAL = "CRITICAL"
 }
 
-obj Profile {
-    has name: str,
-        life_stage: str;
-}
-
-obj AcademicTask {
-    has id: str,
-        title: str,
-        deadline: str,
-        progress: float,
-        estimated_remaining_hours: float,
-        importance: int;
-}
-
-obj FinanceSnapshot {
-    has weekly_budget: float,
-        remaining_budget: float,
-        spent_today: float,
-        days_remaining: int;
-}
-
-obj AvailableTime {
-    has available_hours_today: float;
-}
-
-obj StudentSnapshot {
-    has profile: Profile,
-        academic_tasks: list[AcademicTask],
-        finance: FinanceSnapshot,
-        available_time: AvailableTime,
-        goals: list[str];
-}
-
 obj AgentResult {
     has domain: Domain,
         urgency: UrgencyLevel,

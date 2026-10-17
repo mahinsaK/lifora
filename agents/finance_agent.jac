@@ -6,11 +6,11 @@ import from jaclang.byllm.lib {
     OutputConversionError,
     RateLimitError
 }
+import from services.state { FinanceView as FinanceSnapshot }
 import from agents.types {
     AgentResult,
     Domain,
     FinanceAssessment,
-    FinanceSnapshot,
     RiskLevel,
     SpecialistNarrative,
     UrgencyLevel

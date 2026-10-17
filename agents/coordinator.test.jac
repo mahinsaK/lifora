@@ -60,7 +60,7 @@ test "coordinator ranks urgency and preserves budget action" {
     assert preparation.ranked_domains[1] == Domain.FINANCE;
     assert preparation.finance_action == finance.recommendation;
     assert len(preparation.candidate_work_blocks) == 3;
-    assert "ML Assignment" in preparation.candidate_work_blocks[0];
+    assert "Machine Learning Assignment" in preparation.candidate_work_blocks[0];
 }
 
 test "coordinator caps incompatible academic work and records resolution" {
@@ -143,11 +143,11 @@ test "coordinator uses a safe typed AI decision" {
     llm = MockLLM(
         outputs=[
             {
-                "next_action": "Focus block 1: 1.50 hours on ML Assignment",
+                "next_action": "Focus block 1: 1.50 hours on Machine Learning Assignment",
                 "daily_plan": [
-                    "Focus block 1: 1.50 hours on ML Assignment",
+                    "Focus block 1: 1.50 hours on Machine Learning Assignment",
                     "Break: 0.25 hours",
-                    "Focus block 2: 1.50 hours on ML Assignment"
+                    "Focus block 2: 1.50 hours on Machine Learning Assignment"
                 ],
                 "explanation": "The nearest high-risk deadline wins while the budget restriction remains active.",
                 "deprioritized": [
@@ -161,7 +161,8 @@ test "coordinator uses a safe typed AI decision" {
     (academic, finance, balance) = demo_specialist_results(3.0, 5.0);
     result = run_coordinator(snapshot, academic, finance, balance);
 
-    assert result.next_action == "Focus block 1: 1.50 hours on ML Assignment";
+    assert result.next_action
+        == "Focus block 1: 1.50 hours on Machine Learning Assignment";
     assert len(result.daily_plan) == 3;
     assert result.finance_action == finance.recommendation;
     assert len(result.conflicts) == 1;

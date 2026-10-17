@@ -7,9 +7,9 @@ import from jaclang.byllm.lib {
     RateLimitError
 }
 import from agents.deadline_risk { assess_deadline_risk, hours_before_deadline }
+import from services.state { AcademicTaskView as AcademicTask }
 import from agents.types {
     AcademicAssessment,
-    AcademicTask,
     AgentResult,
     Domain,
     RiskLevel,

@@ -21,7 +21,7 @@ test "academic assessment selects the most urgent unfinished task" {
     assert assessment.risk_level == RiskLevel.HIGH;
     assert assessment.urgency == UrgencyLevel.HIGH;
     assert assessment.required_time == 3.0;
-    assert "ML Assignment" in assessment.candidate_next_action;
+    assert "Machine Learning Assignment" in assessment.candidate_next_action;
 }
 
 test "completed tasks are excluded from academic priority" {
