@@ -23,7 +23,9 @@ def MetricCard(
     value: str,
     detail: str,
     icon: any,
-    risk: str = ""
+    risk: str = "",
+    actionLabel: str = "",
+    onAction: Callable[[], None] | None = None
 ) -> JsxElement {
     return <article className="flex min-w-0 items-center gap-4 rounded-2xl border bg-card px-4 py-4 shadow-sm sm:px-5">
         <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -33,13 +35,18 @@ def MetricCard(
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
             <p className="truncate text-2xl font-semibold tracking-tight">{value}</p>
             <p className="text-xs leading-relaxed text-muted-foreground">{detail}</p>
+            {actionLabel and onAction and <Button size="sm" variant="outline" className="mt-2 h-8" onClick={lambda (e: MouseEvent) { onAction(); }}>{actionLabel}</Button>}
         </div>
         {risk and <RiskBadge level={risk} />}
     </article>;
 }
 
 
-def:pub SituationSummary(snapshot: StudentSnapshot, plan: PlanningResponse | None) -> JsxElement {
+def:pub SituationSummary(
+    snapshot: StudentSnapshot,
+    plan: PlanningResponse | None,
+    onAddTask: Callable[[], None]
+) -> JsxElement {
     openTasks = len([task for task in snapshot.academic_tasks if task.progress < 100]);
     academicRisk = level_of(plan.academic.risk_level) if plan else "";
     financeRisk = level_of(plan.finance.urgency) if plan else "";
@@ -54,7 +61,15 @@ def:pub SituationSummary(snapshot: StudentSnapshot, plan: PlanningResponse | Non
             <Link to="/update" className="text-sm font-medium text-primary hover:underline">Update details</Link>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
-            <MetricCard label="Coursework pressure" value={str(openTasks) + (" unfinished task" if openTasks == 1 else " unfinished tasks")} detail="Deadlines, progress, and work still required" icon={BookOpen01Icon} risk={academicRisk} />
+            <MetricCard
+                label="Coursework pressure"
+                value={(str(openTasks) + (" unfinished task" if openTasks == 1 else " unfinished tasks")) if len(snapshot.academic_tasks) > 0 else "No tasks yet"}
+                detail={"Deadlines, progress, and work still required" if len(snapshot.academic_tasks) > 0 else "Add coursework so Lifora can include it in your decision"}
+                icon={BookOpen01Icon}
+                risk={academicRisk}
+                actionLabel={"Add your first task" if len(snapshot.academic_tasks) == 0 else ""}
+                onAction={onAddTask}
+            />
             <MetricCard label="Spending room" value={fmt_money(snapshot.finance.remaining_budget)} detail={"Available for the next " + str(snapshot.finance.days_remaining) + " days"} icon={Wallet01Icon} risk={financeRisk} />
             <MetricCard label="Focus time left today" value={fmt_hours(snapshot.available_time.available_hours_today)} detail="Realistic study or work time after other commitments" icon={HourglassIcon} risk={balanceRisk} />
         </div>

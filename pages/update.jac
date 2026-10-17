@@ -79,7 +79,7 @@ def:pub UpdatePage -> JsxPage {
         </details>
         <details className="group rounded-2xl border bg-card shadow-sm">
             <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4"><span><span className="block font-semibold">Transaction history</span><span className="block text-sm text-muted-foreground">Review recorded income and expenses</span></span><HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} className="size-4 transition-transform group-open:rotate-180" /></summary>
-            <div className="border-t p-4"><TransactionHistory transactions={app["transactions"]} /></div>
+            <div className="border-t p-4"><TransactionHistory transactions={app["transactions"]} onAddIncome={lambda { set_dialog.call(None, "income"); }} onAddExpense={lambda { set_dialog.call(None, "expense"); }} /></div>
         </details>
         </div>
         }}

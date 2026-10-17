@@ -549,11 +549,18 @@ def:pub IncomeForm(
 }
 
 
-def:pub TransactionHistory(transactions: list[TransactionView]) -> JsxElement {
+def:pub TransactionHistory(
+    transactions: list[TransactionView],
+    onAddIncome: Callable[[], None],
+    onAddExpense: Callable[[], None]
+) -> JsxElement {
     return <section className="flex flex-col gap-4 rounded-xl border bg-card p-5 shadow-sm lg:col-span-2">
         <FormHeading icon={Wallet01Icon} title="Transaction history" description="Income and expenses recorded in your graph." />
         {if len(transactions) == 0 {
-            <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">No transactions recorded yet.</p>
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed px-4 py-6 text-center">
+                <div><p className="text-sm font-medium">No transactions recorded yet.</p><p className="text-xs text-muted-foreground">Add money received or record your first expense.</p></div>
+                <div className="flex flex-wrap justify-center gap-2"><Button size="sm" onClick={lambda (e: MouseEvent) { onAddIncome(); }}>Add income</Button><Button size="sm" variant="outline" onClick={lambda (e: MouseEvent) { onAddExpense(); }}>Add expense</Button></div>
+            </div>
         } else {
             <ul className="divide-y rounded-lg border">
                 {for transaction in transactions {

@@ -45,7 +45,7 @@ def:pub OverviewPage -> JsxPage {
                 <Button variant="outline" onClick={lambda (e: MouseEvent) { reload.call(None); }}>Retry</Button>
             </div>
         } else {
-            <SituationSummary snapshot={snapshot} plan={plan} />
+            <SituationSummary snapshot={snapshot} plan={plan} onAddTask={lambda { set_dialog.call(None, "task"); }} />
             <QuickActions onOpen={lambda (kind: str) { set_dialog.call(None, kind); }} />
             <DemoPath hasPlan={plan is not None} planning={planning} onRun={app["runPlan"]} onExpense={lambda { set_dialog.call(None, "expense"); }} />
         }}
