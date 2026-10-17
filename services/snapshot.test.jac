@@ -1,3 +1,4 @@
+import pytest;
 import from datetime { date, timedelta }
 import from .state {
     HasAcademicTask,
@@ -116,7 +117,7 @@ test "snapshot reflects task finance and time mutations" {
 test "snapshot reports missing and incomplete state clearly" {
     missing_id = "phase5-missing-fixture";
     remove_snapshot_test_student(missing_id);
-    with testraises(ValueError, `match="Student.*was not found") {
+    with pytest.raises(ValueError, `match="Student.*was not found") {
         build_student_snapshot(missing_id);
     }
 
@@ -127,7 +128,7 @@ test "snapshot reports missing and incomplete state clearly" {
         "university",
         5.0
     );
-    with testraises(ValueError, `match="Budget.*was not found") {
+    with pytest.raises(ValueError, `match="Budget.*was not found") {
         build_student_snapshot(incomplete_id);
     }
     remove_snapshot_test_student(incomplete_id);

@@ -104,7 +104,7 @@ def assess_academic_tasks(
             task,
             task_risk,
             task_hours_to_deadline,
-            selected,
+            selected as AcademicTask,
             selected_risk,
             selected_hours_to_deadline
         ) {
@@ -124,15 +124,16 @@ def assess_academic_tasks(
             candidate_next_action="No unfinished academic task requires action."
         );
     }
+    selected_task = selected as AcademicTask;
 
     return AcademicAssessment(
         risk_level=selected_risk,
         urgency=urgency_from_risk(selected_risk),
-        most_urgent_task_id=selected.id,
-        most_urgent_task_title=selected.title,
-        required_time=selected.estimated_remaining_hours,
+        most_urgent_task_id=selected_task.id,
+        most_urgent_task_title=selected_task.title,
+        required_time=selected_task.estimated_remaining_hours,
         candidate_next_action=academic_next_action(
-            selected, selected_risk, available_hours
+            selected_task, selected_risk, available_hours
         )
     );
 }

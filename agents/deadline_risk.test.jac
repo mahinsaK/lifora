@@ -1,3 +1,4 @@
+import pytest;
 import from agents.types { RiskLevel }
 
 glob FIXED_NOW = "2026-10-17T18:00:00+05:30";
@@ -67,10 +68,10 @@ test "an elapsed deadline with unfinished work is critical" {
 }
 
 test "invalid progress is rejected" {
-    with testraises(ValueError) {
+    with pytest.raises(ValueError) {
         assess_deadline_risk(FIXED_NOW, "2026-10-18T18:00:00+05:30", -1.0, 2.0, 4.0, 3);
     }
-    with testraises(ValueError) {
+    with pytest.raises(ValueError) {
         assess_deadline_risk(
             FIXED_NOW, "2026-10-18T18:00:00+05:30", 101.0, 2.0, 4.0, 3
         );
@@ -78,12 +79,12 @@ test "invalid progress is rejected" {
 }
 
 test "negative hour inputs are rejected" {
-    with testraises(ValueError) {
+    with pytest.raises(ValueError) {
         assess_deadline_risk(
             FIXED_NOW, "2026-10-18T18:00:00+05:30", 50.0, -1.0, 4.0, 3
         );
     }
-    with testraises(ValueError) {
+    with pytest.raises(ValueError) {
         assess_deadline_risk(
             FIXED_NOW, "2026-10-18T18:00:00+05:30", 50.0, 2.0, -1.0, 3
         );
@@ -91,7 +92,7 @@ test "negative hour inputs are rejected" {
 }
 
 test "importance outside the supported scale is rejected" {
-    with testraises(ValueError) {
+    with pytest.raises(ValueError) {
         assess_deadline_risk(FIXED_NOW, "2026-10-18T18:00:00+05:30", 50.0, 2.0, 4.0, 0);
     }
 }

@@ -1,3 +1,5 @@
+import pytest;
+
 def remove_test_student(student_id: str) {
     student = find_student(student_id);
     if student is not None {
@@ -53,10 +55,10 @@ test "available time rejects values outside one day" {
         available_hours_today=5.0
     );
 
-    with testraises(ValueError, `match="between 0 and 24") {
+    with pytest.raises(ValueError, `match="between 0 and 24") {
         update_student_available_time(student_id, -1.0);
     }
-    with testraises(ValueError, `match="between 0 and 24") {
+    with pytest.raises(ValueError, `match="between 0 and 24") {
         update_student_available_time(student_id, 25.0);
     }
     assert find_student(student_id)?.available_hours_today == 5.0;
@@ -67,7 +69,7 @@ test "available time rejects values outside one day" {
 test "available time update requires an existing student" {
     student_id = "phase1-missing-fixture";
     remove_test_student(student_id);
-    with testraises(ValueError, `match="was not found") {
+    with pytest.raises(ValueError, `match="was not found") {
         update_student_available_time(student_id, 2.0);
     }
 }

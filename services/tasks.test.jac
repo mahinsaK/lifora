@@ -1,3 +1,4 @@
+import pytest;
 import from datetime { date, timedelta }
 import from .state {
     DSA_QUIZ_ID,
@@ -114,10 +115,10 @@ test "task progress rejects values outside 0 to 100" {
         importance=3
     );
 
-    with testraises(ValueError, `match="between 0 and 100") {
+    with pytest.raises(ValueError, `match="between 0 and 100") {
         update_student_task_progress(student_id, "test-task", -1.0);
     }
-    with testraises(ValueError, `match="between 0 and 100") {
+    with pytest.raises(ValueError, `match="between 0 and 100") {
         update_student_task_progress(student_id, "test-task", 101.0);
     }
     assert find_academic_task(student, "test-task")?.progress == 40.0;
@@ -129,19 +130,19 @@ test "academic task creation validates required fields" {
     student_id = "phase3-fields-fixture";
     student = create_task_test_student(student_id);
 
-    with testraises(ValueError, `match="title is required") {
+    with pytest.raises(ValueError, `match="title is required") {
         initialize_academic_task(
             student, "empty-title", "", date.today().isoformat(),
             0.0, 1.0, 3
         );
     }
-    with testraises(ValueError, `match="cannot be negative") {
+    with pytest.raises(ValueError, `match="cannot be negative") {
         initialize_academic_task(
             student, "negative-hours", "Invalid Task",
             date.today().isoformat(), 0.0, -1.0, 3
         );
     }
-    with testraises(ValueError, `match="ISO date format") {
+    with pytest.raises(ValueError, `match="ISO date format") {
         initialize_academic_task(
             student, "invalid-date", "Invalid Task", "tomorrow",
             0.0, 1.0, 3
@@ -155,7 +156,7 @@ test "academic task creation validates required fields" {
 test "task operations reject unknown identifiers" {
     student_id = "phase3-missing-fixture";
     _ = create_task_test_student(student_id);
-    with testraises(ValueError, `match="was not found") {
+    with pytest.raises(ValueError, `match="was not found") {
         update_student_task_progress(student_id, "missing-task", 90.0);
     }
     remove_task_test_student(student_id);

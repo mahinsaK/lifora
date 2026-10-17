@@ -1,7 +1,9 @@
+import pytest;
 import from jaclang.byllm.lib { MockError, MockLLM, ModelNotFoundError, RateLimitError }
 import from agents.mock_snapshot { build_demo_snapshot }
+import from agents.test_support { build_mock_llm }
 
-glob llm = MockLLM(outputs=[]);
+glob llm = build_mock_llm(outputs=[]);
 
 test "finance assessment calculates the documented demo budget" {
     snapshot = build_demo_snapshot();
@@ -61,7 +63,7 @@ test "overspending produces critical finance pressure" {
 }
 
 test "inconsistent finance inputs are rejected" {
-    with testraises(ValueError) {
+    with pytest.raises(ValueError) {
         assess_finances(
             FinanceSnapshot(
                 weekly_budget=1000.0,
@@ -71,7 +73,7 @@ test "inconsistent finance inputs are rejected" {
             )
         );
     }
-    with testraises(ValueError) {
+    with pytest.raises(ValueError) {
         assess_finances(
             FinanceSnapshot(
                 weekly_budget=1000.0,
@@ -101,15 +103,13 @@ test "finance result keeps deterministic fields locked" {
 }
 
 test "finance agent uses byLLM only for narrative fields" {
-    llm = MockLLM(
-        outputs=[
-            {
-                "summary": "Today's spending creates high budget pressure.",
-                "recommendation": "Reduce optional spending for the rest of the week.",
-                "explanation": "Today's spending is above the calculated daily allowance."
-            }
-        ]
-    );
+    llm.config["outputs"] = [
+            SpecialistNarrative(
+                summary="Today's spending creates high budget pressure.",
+                recommendation="Reduce optional spending for the rest of the week.",
+                explanation="Today's spending is above the calculated daily allowance."
+            )
+        ];
     snapshot = build_demo_snapshot();
     result = run_finance_agent(snapshot.finance);
 
@@ -118,13 +118,13 @@ test "finance agent uses byLLM only for narrative fields" {
     assert result.urgency == UrgencyLevel.HIGH;
     assert result.required_time == 0.0;
     assert result.summary == "Today's spending creates high budget pressure.";
-    assert llm.exhausted();
+    assert len(llm.config["outputs"]) == 0;
 }
 
 test "finance agent falls back after rate-limit failure" {
-    llm = MockLLM(
-        outputs=[MockError(error=RateLimitError(message="test rate limit failure"))]
-    );
+    llm.config["outputs"] = [
+        MockError(error=RateLimitError(message="test rate limit failure"))
+    ];
     snapshot = build_demo_snapshot();
     result = run_finance_agent(snapshot.finance);
 
@@ -132,13 +132,13 @@ test "finance agent falls back after rate-limit failure" {
     assert result.urgency == UrgencyLevel.HIGH;
     assert result.required_time == 0.0;
     assert "AI reasoning was unavailable" in result.reasoning;
-    assert llm.exhausted();
+    assert len(llm.config["outputs"]) == 0;
 }
 
 test "finance agent falls back after missing-model failure" {
-    llm = MockLLM(
-        outputs=[MockError(error=ModelNotFoundError(message="test model failure"))]
-    );
+    llm.config["outputs"] = [
+        MockError(error=ModelNotFoundError(message="test model failure"))
+    ];
     snapshot = build_demo_snapshot();
     result = run_finance_agent(snapshot.finance);
 
@@ -146,5 +146,5 @@ test "finance agent falls back after missing-model failure" {
     assert result.urgency == UrgencyLevel.HIGH;
     assert result.required_time == 0.0;
     assert "AI reasoning was unavailable" in result.reasoning;
-    assert llm.exhausted();
+    assert len(llm.config["outputs"]) == 0;
 }

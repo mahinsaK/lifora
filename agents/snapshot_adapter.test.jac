@@ -1,3 +1,4 @@
+import pytest;
 import from services.state { AcademicTaskView }
 
 glob FIXED_ADAPTER_NOW = "2026-10-17T18:00:00+05:30";
@@ -14,7 +15,7 @@ test "date-only deadline adapts to end of day in planning timezone" {
 }
 
 test "naive datetime is rejected instead of guessing a timezone" {
-    with testraises(ValueError, `match="timezone-aware") {
+    with pytest.raises(ValueError, `match="timezone-aware") {
         normalize_planning_deadline("2026-10-19T23:59:00", FIXED_ADAPTER_NOW);
     }
 }

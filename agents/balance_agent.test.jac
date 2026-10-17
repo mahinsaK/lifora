@@ -1,3 +1,4 @@
+import pytest;
 import from jaclang.byllm.lib {
     ConfigurationError,
     FinishToolError,
@@ -6,8 +7,9 @@ import from jaclang.byllm.lib {
 }
 import from agents.academic_agent { assess_academic_tasks }
 import from agents.mock_snapshot { build_demo_snapshot }
+import from agents.test_support { build_mock_llm }
 
-glob llm = MockLLM(outputs=[]),
+glob llm = build_mock_llm(outputs=[]),
      FIXED_BALANCE_NOW = "2026-10-17T18:00:00+05:30";
 
 test "work fitting the evening includes breaks and buffer" {
@@ -42,10 +44,10 @@ test "a nearly full but feasible schedule has medium pressure" {
 }
 
 test "invalid balance hours are rejected" {
-    with testraises(ValueError) {
+    with pytest.raises(ValueError) {
         assess_balance(-1.0, 3.0);
     }
-    with testraises(ValueError) {
+    with pytest.raises(ValueError) {
         assess_balance(1.0, -3.0);
     }
 }
@@ -79,15 +81,13 @@ test "balance result keeps deterministic fields locked" {
 }
 
 test "balance agent uses byLLM only for narrative fields" {
-    llm = MockLLM(
-        outputs=[
-            {
-                "summary": "The proposed workload exceeds realistic focus capacity.",
-                "recommendation": "Reduce the work block and defer the remainder.",
-                "explanation": "The proposal does not fit after breaks and buffer time."
-            }
-        ]
-    );
+    llm.config["outputs"] = [
+            SpecialistNarrative(
+                summary="The proposed workload exceeds realistic focus capacity.",
+                recommendation="Reduce the work block and defer the remainder.",
+                explanation="The proposal does not fit after breaks and buffer time."
+            )
+        ];
     result = run_balance_agent(4.0, 3.0);
 
     assert result.domain == Domain.BALANCE;
@@ -95,33 +95,31 @@ test "balance agent uses byLLM only for narrative fields" {
     assert result.urgency == UrgencyLevel.CRITICAL;
     assert abs(result.required_time - 2.45) < 0.001;
     assert result.summary == "The proposed workload exceeds realistic focus capacity.";
-    assert llm.exhausted();
+    assert len(llm.config["outputs"]) == 0;
 }
 
 test "balance agent falls back after configuration failure" {
-    llm = MockLLM(
-        outputs=[
+    llm.config["outputs"] = [
             MockError(error=ConfigurationError(message="test configuration failure"))
-        ]
-    );
+        ];
     result = run_balance_agent(4.0, 3.0);
 
     assert result.risk_level == RiskLevel.CRITICAL;
     assert result.urgency == UrgencyLevel.CRITICAL;
     assert abs(result.required_time - 2.45) < 0.001;
     assert "AI reasoning was unavailable" in result.reasoning;
-    assert llm.exhausted();
+    assert len(llm.config["outputs"]) == 0;
 }
 
 test "balance agent falls back after finish-tool failure" {
-    llm = MockLLM(
-        outputs=[MockError(error=FinishToolError(message="test finish-tool failure"))]
-    );
+    llm.config["outputs"] = [
+        MockError(error=FinishToolError(message="test finish-tool failure"))
+    ];
     result = run_balance_agent(4.0, 3.0);
 
     assert result.risk_level == RiskLevel.CRITICAL;
     assert result.urgency == UrgencyLevel.CRITICAL;
     assert abs(result.required_time - 2.45) < 0.001;
     assert "AI reasoning was unavailable" in result.reasoning;
-    assert llm.exhausted();
+    assert len(llm.config["outputs"]) == 0;
 }

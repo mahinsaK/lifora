@@ -120,9 +120,13 @@ def select_coordinator_task(
         if abs(task.estimated_remaining_hours - required_time) > 0.001 {
             continue;
         }
-        if selected is None
-            or datetime.fromisoformat(task.deadline)
-                < datetime.fromisoformat(selected.deadline) {
+        if selected is None {
+            selected = task;
+            continue;
+        }
+        selected_task = selected as AcademicTask;
+        if datetime.fromisoformat(task.deadline)
+            < datetime.fromisoformat(selected_task.deadline) {
             selected = task;
         }
     }

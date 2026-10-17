@@ -1,3 +1,4 @@
+import pytest;
 import from datetime { date, timedelta }
 import from .state {
     DEMO_DAYS_REMAINING,
@@ -95,7 +96,7 @@ test "expense updates budget once and repeated reads are safe" {
     second_read = get_student_finance(student_id);
     assert first_read.remaining_budget == 2500.0;
     assert second_read.remaining_budget == 2500.0;
-    with testraises(ValueError, `match="already exists") {
+    with pytest.raises(ValueError, `match="already exists") {
         record_student_expense(
             student_id, "books-1000", 1000.0, "Books"
         );
@@ -125,13 +126,13 @@ test "finance operations reject invalid expenses and missing budgets" {
     student = create_finance_test_student(student_id);
     _ = initialize_budget(student, 7000.0, 3500.0, 4);
 
-    with testraises(ValueError, `match="greater than zero") {
+    with pytest.raises(ValueError, `match="greater than zero") {
         record_student_expense(student_id, "negative", -1.0, "Invalid");
     }
-    with testraises(ValueError, `match="description is required") {
+    with pytest.raises(ValueError, `match="description is required") {
         record_student_expense(student_id, "empty-description", 10.0, "");
     }
-    with testraises(ValueError, `match="ISO date format") {
+    with pytest.raises(ValueError, `match="ISO date format") {
         record_student_expense(
             student_id, "bad-date", 10.0, "Invalid date", "today"
         );
@@ -141,7 +142,7 @@ test "finance operations reject invalid expenses and missing budgets" {
 
     no_budget_id = "phase4-no-budget-fixture";
     _ = create_finance_test_student(no_budget_id);
-    with testraises(ValueError, `match="Budget.*was not found") {
+    with pytest.raises(ValueError, `match="Budget.*was not found") {
         get_student_finance(no_budget_id);
     }
     remove_finance_test_student(no_budget_id);
