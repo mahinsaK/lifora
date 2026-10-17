@@ -17,7 +17,7 @@ import from "@hugeicons/core-free-icons" {
 import from .ui.button { Button }
 import from .ui.dialog { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription }
 import from .ui.slider { Slider }
-import from .ui.field { Field, FieldLabel, FieldDescription }
+import from .ui.field { Field, FieldLabel, FieldDescription, FieldError }
 import from .ui.input { Input }
 import from .ui.input_group { InputGroup, InputGroupAddon, InputGroupText, InputGroupInput }
 import from .ui.spinner { Spinner }
@@ -64,6 +64,13 @@ def FormActions(
             {not saving and <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="size-3.5" />}
             {"Saving…" if saving else label}
         </Button>
+    </div>;
+}
+
+
+def ValidationSummary(message: str) -> JsxElement {
+    return <div aria-live="polite" className="min-h-5">
+        {message and <FieldError>{message}</FieldError>}
     </div>;
 }
 
@@ -195,6 +202,18 @@ def:pub AddTaskForm(
     progress = 0.0 if progressValue != progressValue else progressValue;
     hours = 0.0 if hoursValue != hoursValue else hoursValue;
     valid = bool(title.strip()) and bool(deadline) and progress >= 0 and progress <= 100 and hours >= 0 and bool(hoursText);
+    validationMessage = "";
+    if not title.strip() {
+        validationMessage = "Enter a task title.";
+    } elif not deadline {
+        validationMessage = "Choose a deadline.";
+    } elif not progressText or progress < 0 or progress > 100 {
+        validationMessage = "Progress must be between 0% and 100%.";
+    } elif not hoursText {
+        validationMessage = "Wait for Lifora's estimate, or enter the remaining hours.";
+    } elif hours < 0 {
+        validationMessage = "Hours remaining cannot be negative.";
+    }
 
     def save {
         onSave(title.strip(), deadline, progress, hours, importance);
@@ -286,20 +305,22 @@ def:pub AddTaskForm(
     return <div className="flex flex-col gap-4">
         <Field>
             <FieldLabel htmlFor="task-title">Task title</FieldLabel>
-            <Input id="task-title" placeholder="Database Systems Exam" value={title} onChange={lambda (e: ChangeEvent) { title = e.target.value; schedule_estimate(e.target.value, deadline, progressText, importance); }} />
+            <Input id="task-title" required aria-invalid={bool(title) and not bool(title.strip())} placeholder="Database Systems Exam" value={title} onChange={lambda (e: ChangeEvent) { title = e.target.value; schedule_estimate(e.target.value, deadline, progressText, importance); }} />
+            <FieldDescription>Required. Use a name you will recognize in your plan.</FieldDescription>
         </Field>
         <Field>
             <FieldLabel htmlFor="task-deadline">Deadline</FieldLabel>
-            <Input id="task-deadline" type="date" value={deadline} onChange={lambda (e: ChangeEvent) { deadline = e.target.value; schedule_estimate(title, e.target.value, progressText, importance); }} />
+            <Input id="task-deadline" required type="date" value={deadline} onChange={lambda (e: ChangeEvent) { deadline = e.target.value; schedule_estimate(title, e.target.value, progressText, importance); }} />
+            <FieldDescription>Required. Lifora uses this to measure urgency.</FieldDescription>
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
             <Field>
                 <FieldLabel htmlFor="task-progress">Current progress (%)</FieldLabel>
-                <Input id="task-progress" type="number" min="0" max="100" value={progressText} onChange={lambda (e: ChangeEvent) { progressText = e.target.value; schedule_estimate(title, deadline, e.target.value, importance); }} />
+                <Input id="task-progress" required aria-invalid={not progressText or progress < 0 or progress > 100} type="number" min="0" max="100" value={progressText} onChange={lambda (e: ChangeEvent) { progressText = e.target.value; schedule_estimate(title, deadline, e.target.value, importance); }} />
             </Field>
             <Field>
                 <FieldLabel htmlFor="task-hours">Hours remaining</FieldLabel>
-                <Input id="task-hours" type="number" min="0" step="0.5" placeholder="3" value={hoursText} onChange={handle_hours_change} />
+                <Input id="task-hours" required aria-invalid={bool(hoursText) and hours < 0} type="number" min="0" step="0.5" placeholder="3" value={hoursText} onChange={handle_hours_change} />
                 <FieldDescription>{"Estimating from your task details…" if estimating else ("Manual value; change task details to recalculate." if hoursManuallyEdited else "Suggested automatically; you can adjust it.")}</FieldDescription>
             </Field>
         </div>
@@ -313,6 +334,7 @@ def:pub AddTaskForm(
             </div>
             <FieldDescription>1 is low priority; 5 is essential.</FieldDescription>
         </Field>
+        <ValidationSummary message={validationMessage} />
         <FormActions label="Create task" saving={saving} disabled={not valid} onSave={save} onCancel={onCancel} />
     </div>;
 }
@@ -356,6 +378,16 @@ def:pub EditTaskForm(
     parsedHours = float(hoursText) if hoursText else -1.0;
     hours = -1.0 if parsedHours != parsedHours else parsedHours;
     valid = bool(taskId) and bool(title.strip()) and bool(deadline) and hours >= 0;
+    validationMessage = "";
+    if not taskId {
+        validationMessage = "Choose a task to edit.";
+    } elif not title.strip() {
+        validationMessage = "Enter a task title.";
+    } elif not deadline {
+        validationMessage = "Choose a deadline.";
+    } elif not hoursText or hours < 0 {
+        validationMessage = "Hours remaining must be zero or greater.";
+    }
 
     return <div className="flex flex-col gap-4">
         <Field>
@@ -366,15 +398,16 @@ def:pub EditTaskForm(
                 }}
             </div>
         </Field>
-        <Field><FieldLabel htmlFor="edit-task-title">Title</FieldLabel><Input id="edit-task-title" value={title} onChange={lambda (e: ChangeEvent) { title = e.target.value; }} /></Field>
+        <Field><FieldLabel htmlFor="edit-task-title">Title</FieldLabel><Input id="edit-task-title" required aria-invalid={bool(title) and not bool(title.strip())} value={title} onChange={lambda (e: ChangeEvent) { title = e.target.value; }} /></Field>
         <div className="grid gap-4 sm:grid-cols-2">
-            <Field><FieldLabel htmlFor="edit-task-deadline">Deadline</FieldLabel><Input id="edit-task-deadline" type="date" value={deadline} onChange={lambda (e: ChangeEvent) { deadline = e.target.value; }} /></Field>
-            <Field><FieldLabel htmlFor="edit-task-hours">Hours remaining</FieldLabel><Input id="edit-task-hours" type="number" min="0" step="0.5" value={hoursText} onChange={lambda (e: ChangeEvent) { hoursText = e.target.value; }} /></Field>
+            <Field><FieldLabel htmlFor="edit-task-deadline">Deadline</FieldLabel><Input id="edit-task-deadline" required type="date" value={deadline} onChange={lambda (e: ChangeEvent) { deadline = e.target.value; }} /></Field>
+            <Field><FieldLabel htmlFor="edit-task-hours">Hours remaining</FieldLabel><Input id="edit-task-hours" required aria-invalid={bool(hoursText) and hours < 0} type="number" min="0" step="0.5" value={hoursText} onChange={lambda (e: ChangeEvent) { hoursText = e.target.value; }} /></Field>
         </div>
         <Field>
             <FieldLabel>Importance</FieldLabel>
             <div className="flex flex-wrap gap-2">{for level in [1, 2, 3, 4, 5] { <span key={str(level)}><Chip label={str(level)} active={importance == level} onPick={lambda { importance = level; }} /></span> }}</div>
         </Field>
+        <ValidationSummary message={validationMessage} />
         <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
             {onCancel and <Button variant="ghost" onClick={lambda (e: MouseEvent) { onCancel(); }}>Cancel</Button>}
             <Button variant="outline" disabled={saving or not taskId or progress >= 100} onClick={lambda (e: MouseEvent) { onComplete(taskId); }}>Mark completed</Button>
@@ -403,6 +436,7 @@ def:pub ExpenseForm(
     amount = 0.0 if parsed != parsed else parsed;
     valid = amount > 0;
     after = remaining - amount;
+    validationMessage = "Enter an expense amount greater than zero." if amount <= 0 else "";
 
     def save {
         description = category + (" - " + note.strip() if note.strip() else "");
@@ -416,6 +450,8 @@ def:pub ExpenseForm(
                 <InputGroupAddon><InputGroupText>Rs.</InputGroupText></InputGroupAddon>
                 <InputGroupInput
                     id="expense-amount"
+                    required
+                    aria-invalid={bool(amountText) and amount <= 0}
                     type="number"
                     inputMode="decimal"
                     min="0"
@@ -461,6 +497,7 @@ def:pub ExpenseForm(
             {valid and <span className={"font-semibold tabular-nums " + ("text-risk-high" if after < 0 else "text-primary")}>{fmt_money(after)}</span>}
         </div>
 
+        <ValidationSummary message={validationMessage} />
         <FormActions label="Add expense" saving={saving} disabled={not valid} onSave={save} onCancel={onCancel} />
     </div>;
 }
@@ -477,6 +514,14 @@ def:pub IncomeForm(
     parsed = float(amountText) if amountText else 0.0;
     amount = 0.0 if parsed != parsed else parsed;
     valid = amount > 0 and bool(description.strip()) and bool(receivedOn);
+    validationMessage = "";
+    if amount <= 0 {
+        validationMessage = "Enter an income amount greater than zero.";
+    } elif not description.strip() {
+        validationMessage = "Describe where this money came from.";
+    } elif not receivedOn {
+        validationMessage = "Choose the date the money was received.";
+    }
 
     def save {
         onSave(amount, description.strip(), receivedOn);
@@ -487,17 +532,18 @@ def:pub IncomeForm(
             <FieldLabel htmlFor="income-amount">Amount</FieldLabel>
             <InputGroup className="h-11">
                 <InputGroupAddon><InputGroupText>Rs.</InputGroupText></InputGroupAddon>
-                <InputGroupInput id="income-amount" type="number" min="0" inputMode="decimal" placeholder="5000" value={amountText} onChange={lambda (e: ChangeEvent) { amountText = e.target.value; }} />
+                <InputGroupInput id="income-amount" required aria-invalid={bool(amountText) and amount <= 0} type="number" min="0" inputMode="decimal" placeholder="5000" value={amountText} onChange={lambda (e: ChangeEvent) { amountText = e.target.value; }} />
             </InputGroup>
         </Field>
         <Field>
             <FieldLabel htmlFor="income-description">Description</FieldLabel>
-            <Input id="income-description" placeholder="Allowance or part-time work" value={description} onChange={lambda (e: ChangeEvent) { description = e.target.value; }} />
+            <Input id="income-description" required aria-invalid={bool(description) and not bool(description.strip())} placeholder="Allowance or part-time work" value={description} onChange={lambda (e: ChangeEvent) { description = e.target.value; }} />
         </Field>
         <Field>
             <FieldLabel htmlFor="income-date">Date received</FieldLabel>
-            <Input id="income-date" type="date" value={receivedOn} onChange={lambda (e: ChangeEvent) { receivedOn = e.target.value; }} />
+            <Input id="income-date" required type="date" value={receivedOn} onChange={lambda (e: ChangeEvent) { receivedOn = e.target.value; }} />
         </Field>
+        <ValidationSummary message={validationMessage} />
         <FormActions label="Add income" saving={saving} disabled={not valid} onSave={save} onCancel={onCancel} />
     </div>;
 }
