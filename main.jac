@@ -1,5 +1,6 @@
-import from .frontend { app as ClientApp }
+import ".styles.global.css";
+import from .components.LiforaDashboard { LiforaDashboard }
 
 def:pub app() -> JsxElement {
-    return <ClientApp />;
+    return <LiforaDashboard />;
 }
